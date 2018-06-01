@@ -17,7 +17,7 @@ $(document).ready(function () {
         arubrosx = processRubros(arubrosx);
         aprecios = processPrecios(aprecios);
         var requestBody = '{"lineas":' + alineasx + ',"rubros":' + arubrosx + ',"precios":' + aprecios + '}';
-        console.log(requestBody);
+        //console.log(requestBody);
         $.ajax({
             method: 'POST',
             url: 'http://localhost:4567/item/all',
@@ -89,7 +89,6 @@ $(document).ready(function () {
         var body = '[';
         var cont = 0;
         lines.forEach(function (element, index) {
-            cont = cont + 1;
             if (element != "") {
                 element = element.replace(/["']/g, '').trim();
                 var linea = element.substring(0, 4).trim();//Codigo de linea
@@ -97,9 +96,10 @@ $(document).ready(function () {
                 var codigo = element.substring(7, 27).trim();//Codigo de producto
                 var aplicacion = element.substring(27, 62).trim();//Aplicacion del producto
                 var precio = element.substring(62).trim();//Precio del producto
+                precio = precio.substring(0,8)+"."+precio.substring(8);
                 var object = '{"codigo":"' + codigo + '", "linea":"' + linea + '", "rubro":"' + rubro +
                     '", "aplicacion":"' + aplicacion + '", "precio":"' + precio + '"}, ';
-                if (cont < 3) body += object;
+                body += object;
             }
         });
         body = body.slice(0, -2);
