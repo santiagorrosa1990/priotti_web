@@ -18,6 +18,7 @@ $(document).ready(function () {
         aprecios = JSON.parse(processPrecios(aprecios));
         //var requestBody = '{"lineas":' + alineasx + ',"rubros":' + arubrosx + ',"precios":' + aprecios + '}';
         var list = build(alineasx, aprecios, arubrosx);
+        console.log(list);
         sendRequest(list);
     }
 
@@ -45,8 +46,10 @@ $(document).ready(function () {
                 element = element.replace(/\s/g, "").replace(/["']/g, "").trim();
                 var codigo = element.substring(0, 4);//Codigo de linea
                 var linea = element.substring(4);//Nombre de linea
-                var object = '"'+codigo+'":"'+linea+'", ';
-                body += object;
+                if(!linea.includes("FUSIBLESFICHADESNUDOS")){
+                    var object = '"'+codigo+'":"'+linea+'", ';
+                    body += object;
+                }
             }
         });
         body = body.slice(0, -2);
@@ -77,16 +80,19 @@ $(document).ready(function () {
         var cont = 0;
         lines.forEach(function (element, index) {
             if (element != "") {
-                element = element.replace(/["']/g, '').trim();
+                //element = element.replace(/["']/g, "").trim();
                 var linea = element.substring(0, 4).trim();//Codigo de linea
                 var rubro = element.substring(4, 7).trim();//Codigo de rubro
                 var codigo = element.substring(7, 27).trim();//Codigo de producto
-                var aplicacion = element.substring(27, 62).trim();//Aplicacion del producto
+                var aplicacion = element.substring(27, 62).trim().replace(/["']/g, '');//Aplicacion del producto
                 var precio = element.substring(62).trim();//Precio del producto
                 precio = precio.substring(0,8)+"."+precio.substring(8);
+                var cond = !linea.includes("0036") && !linea.includes("0006");
+                if(cond){     //Marcas excluidas de la lista
                 var object = '{"codigo":"' + codigo + '", "linea":"' + linea + '", "rubro":"' + rubro +
                     '", "aplicacion":"' + aplicacion + '", "precio":"' + precio + '"}, ';
                 body += object;
+                }
             }
         });
         body = body.slice(0, -2);
