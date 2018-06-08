@@ -1,4 +1,25 @@
+
 $(document).ready(function () {
+
+    $.ajax({
+        method: 'GET',
+        url: 'http://localhost:4567/item',
+        success: function (data) {
+            $('#myTable').DataTable({
+                data: data,
+                columns: [
+                    { title: "Codigo" },
+                    { title: "Aplicacion" },
+                    { title: "Rubro" },
+                    { title: "Linea" },
+                    { title: "Precio" }
+                ]
+            });
+        },
+        error: function (error) {
+            alert("Error de conexión");
+        }
+    });
 
     $('#upload').on('click', function (event) {
         event.preventDefault();
@@ -7,7 +28,7 @@ $(document).ready(function () {
         files[$('#file').prop('files')[1].name] = $('#file').prop('files')[1];
         files[$('#file').prop('files')[2].name] = $('#file').prop('files')[2];
         sendFiles(files);
-    });                 
+    });
 
     async function sendFiles(files) {
         var alineasx = await readUploadedFileAsText(files["alineasx.txt"]);
@@ -16,7 +37,6 @@ $(document).ready(function () {
         alineasx = JSON.parse(processLineas(alineasx));
         arubrosx = JSON.parse(processRubros(arubrosx));
         aprecios = JSON.parse(processPrecios(aprecios));
-        //var requestBody = '{"lineas":' + alineasx + ',"rubros":' + arubrosx + ',"precios":' + aprecios + '}';
         var list = build(alineasx, aprecios, arubrosx);
         console.log(list);
         sendRequest(list);
@@ -84,7 +104,7 @@ $(document).ready(function () {
                 var linea = element.substring(0, 4).trim();//Codigo de linea
                 var rubro = element.substring(4, 7).trim();//Codigo de rubro
                 var codigo = element.substring(7, 27).trim();//Codigo de producto
-                var aplicacion = element.substring(27, 62).trim().replace(/["']/g, '');//Aplicacion del producto
+                var aplicacion = element.substring(27, 62).trim().replace(/["']/g, '\\"');//Aplicacion del producto
                 var precio = element.substring(62).trim();//Precio del producto
                 precio = precio.substring(0,8)+"."+precio.substring(8);
                 var cond = !linea.includes("0036") && !linea.includes("0006");
