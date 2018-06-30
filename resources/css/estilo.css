@@ -1,7 +1,7 @@
 body{
-    /*background-color: rgb(255, 234, 164);
-    background-color: rgb(224, 224, 224);*/
-    background-image: url("../images/yellow.jpg");   
+    background-color: rgba(255, 243, 133, 0.911);
+    /*background-color: rgb(224, 224, 224);*/
+    /*background-image: url("../images/yellow.jpg"); */  
     /*height: 100%;*/
 }
 

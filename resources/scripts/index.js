@@ -20,10 +20,10 @@ $(document).ready(function () {
     tablaproductos();
     showtablap(true);
     clickednav($("#productos"));
-    actfechas();
+    //actfechas();
 
     //Compruebo sesión existente en recarga de pagina
-    checkreload();
+    //checkreload();
 
     //NAV BAR
 
@@ -233,9 +233,9 @@ $(document).ready(function () {
             },
             "responsive": true,
             "ajax": {
-                "method": "POST",
+                "method": "GET",
                 "async": true,
-                "url": "./Modelo/DAOProductos.php",
+                "url": "http://localhost:4567/item",
                 "data": function (d) {
                     d.opc = tipolista;
                     d.busqueda = busqueda;
