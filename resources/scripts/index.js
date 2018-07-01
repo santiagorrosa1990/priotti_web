@@ -17,7 +17,8 @@ $(document).ready(function () {
     var op = false;
 
     //CARGA INICIAL
-    tablaproductos();
+    //tablaproductos();
+    setItemTable();
     showtablap(true);
     clickednav($("#productos"));
     //actfechas();
@@ -65,9 +66,9 @@ $(document).ready(function () {
             busqueda = busqueda.trim();
             if (busqueda != busquedaux) {
                 busquedaux = busqueda;
-                tabla.ajax.reload();
+                searchItems(keywordsToJson(busqueda));
             }
-        }, 500);
+        }, 1000);
     });
 
     //Multiplicador revendedor
@@ -208,126 +209,62 @@ $(document).ready(function () {
 
     //FUNCION DATATABLES
 
-    function tablaproductos() {
+    function createItemTable(dataSet) {
         tabla = $("#tabla").DataTable({
-            "bFilter": false,
-            "aaSorting": [],
-            "language": {                
-                "emptyTable": "No hay coincidencias",
-                "info": "Mostrando _START_ a _END_ de _TOTAL_ resultados",
-                "infoEmpty": "No hay resultados",
-                //"infoFiltered": "(filtered from _MAX_ total entries)",
-                //"infoPostFix": "",
-                //"thousands": ",",
-                "lengthMenu": "Mostrar _MENU_ por hoja",
-                "loadingRecords": "Cargando...",
-                "processing": "Procesando...",
-                //"search": "Search:",
-                //"zeroRecords": "No matching records found",
-                "paginate": {
-                    "first": "First",
-                    "last": "Last",
-                    "next": "Siguiente",
-                    "previous": "Anterior"
-                },
-            },
-            "responsive": true,
-            "ajax": {
-                "method": "GET",
-                "async": true,
-                "url": "http://localhost:4567/item",
-                "data": function (d) {
-                    d.opc = tipolista;
-                    d.busqueda = busqueda;
-                }
-            },
-            "columns": [
-                { "data": "codigo" },//0
-                { "data": "aplicacion" },//1
-                { "data": "marca" },//2
-                { "data": "rubro" },//3
-                { "data": "info" },//4
-                { "data": "precio_lista" },//5
-                { "data": "precio_oferta" },//6
-                { "data": "precio_oferta" }, // 7 Neto
-                { "data": "precio_lista" }, // 8 Revendedor
-                { "data": "imagen" }//9
+            data: dataSet,
+            columns: [
+                { title: "Codigo" },
+                { title: "Aplicación" },
+                { title: "Rubro" },
+                { title: "Marca." },
+                { title: "Equivalencia" },
+                { title: "Precio" },
+                { title: "Oferta" }
             ],
-            "columnDefs": [
-                {
-                    "targets": [0],
-                    responsivePriority: 0,
-                },
-                {
-                    "targets": [4],
-                    "visible": false,
-                    "searchable": true,
-                    "orderable": false
-                },
-                {
-                    "targets": [5], //Precio de lista
-                    responsivePriority: 1,
-                    "render": function (data, type, row) {
-                        if (row.precio_oferta == 0) {
-                            return '$' + Number(data * coef).toFixed(2);
+           responsive: true,
+           bFilter: false,
+        });
+    }
 
-                        } else {
-                            return '<div class="tachado"> $ ' + Number(data * coef).toFixed(2) + '</div>';
-                        }
-                    },
-                    "visible": false,
-                    "searchable": false
-                },
-                {
-                    "targets": [8], //Precio de reventa
-                    responsivePriority: 1,
-                    "render": function (data, type, row) {
-                        return '$' + Number(data * coef * coef2).toFixed(2);
-                    },
-                    "visible": false,
-                    "searchable": false
-                },
-                {
-                    "targets": [6], //Precio de oferta
-                    responsivePriority: 0,
-                    "render": function (data, type, row) {
-                        if (row.precio_oferta == 0) {
-                            return "---";
-                        } else {
-                            return '$' + Number(data).toFixed(2);
-                        }
+    $("#refresh").on("click", function () {
+        console.log("refresh");
+        var dataNew = [[1, 2, 3, 4, 5, 6, 7],[1, 2, "je", 4, 5, 6, 7] ];
+        tabla.clear().rows.add(dataNew).draw();
+    });
 
-                    },
-                    "visible": false,
-                    "searchable": false
-                },
-                {
-                    "targets": [7], //Precio neto
-                    responsivePriority: 1,
-                    "render": function (data, type, row) {
-                        if (row.precio_oferta == 0) {
-                            return "---";
-                        } else {
-                            return '$' + Number(data * 0.5643).toFixed(2);
-                        }
+    function searchItems(keywords){
+       $.ajax({
+            method: "POST",
+            url: "http://localhost:4567/item/search",
+            data: keywords,
+            success: function (data) {
+                console.log("Search done");
+                console.log(data);
+                var obj = JSON.parse(data);
+                tabla.clear().rows.add(obj).draw();
+            },
+            error: function () {
+                toastr.error("Problemas de conexion", "Reintente");
+            }
+        });
+    }
 
-                    },
-                    "visible": false,
-                    "searchable": false
-                },
-                {
-                    "targets": [9], //Foto
-                    "render": function (data, type, row) {
-                        if (confotos == 0) return row.imagen;
-                        var error = "javascript:this.src='./Resources/fotos/default.jpg'";
-                        return '<img src="./Resources/fotos/' + row.imagen + '.jpg" onerror="' + error + '" id="myImg">';
-                    },
-                    "visible": false,
-                    "searchable": false,
-                    "orderable": false
-                }
-            ]/*,
-            "order": [[2, 'desc']]*/
+    function keywordsToJson(str){
+        var list = str.split(" ");
+        var filtered = list.filter(a => a !== '');
+        return "["+filtered.toString()+"]";
+    }
+
+    function setItemTable() {
+        $.ajax({
+            method: "GET",
+            url: "http://localhost:4567/item",
+            success: function (data) {
+                createItemTable(data);
+            },
+            error: function () {
+                toastr.error("Problemas de conexion", "Error");
+            }
         });
     }
 
@@ -615,10 +552,10 @@ $(document).ready(function () {
         var cont = 0;
         var actual = $('#tablac .form-control');
         //Se chequea que el carro no este vacio y que los items no tengan cantidad 0
-            actual.each(function () {
-                cont = cont+1;
-                if ($(this).val() == 0) valido = false;
-            });
+        actual.each(function () {
+            cont = cont + 1;
+            if ($(this).val() == 0) valido = false;
+        });
         if (valido && cont > 0) {
             $.confirm({
                 title: 'Confirmar envío:',
@@ -798,21 +735,21 @@ $(document).ready(function () {
             },
             "columns": [
                 { "data": "fecha", "width": "30%" },
-                { "data": "items", "width": "70%" },       
+                { "data": "items", "width": "70%" },
             ],
-            "order": [[0, 'desc' ]]
+            "order": [[0, 'desc']]
         });
     }
 
 
     //BACK TO TOP EN LA PAGINA CUANDO SE PASA A LA SIGUIENTE HOJA
-    $('#tabla').on( 'page.dt', function () {
+    $('#tabla').on('page.dt', function () {
         $('html, body').animate({
             scrollTop: 300
         }, 300);
-    } );
+    });
 
-    
+
 });
 
 
