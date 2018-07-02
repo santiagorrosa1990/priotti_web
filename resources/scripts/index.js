@@ -68,7 +68,7 @@ $(document).ready(function () {
                 busquedaux = busqueda;
                 searchItems(keywordsToJson(busqueda));
             }
-        }, 1000);
+        }, 500);
     });
 
     //Multiplicador revendedor
@@ -226,12 +226,6 @@ $(document).ready(function () {
         });
     }
 
-    $("#refresh").on("click", function () {
-        console.log("refresh");
-        var dataNew = [[1, 2, 3, 4, 5, 6, 7],[1, 2, "je", 4, 5, 6, 7] ];
-        tabla.clear().rows.add(dataNew).draw();
-    });
-
     function searchItems(keywords){
        $.ajax({
             method: "POST",
@@ -244,7 +238,7 @@ $(document).ready(function () {
                 tabla.clear().rows.add(obj).draw();
             },
             error: function () {
-                toastr.error("Problemas de conexion", "Reintente");
+                toastr.error("Problemas de conexión", "Ups!");
             }
         });
     }
@@ -263,7 +257,7 @@ $(document).ready(function () {
                 createItemTable(data);
             },
             error: function () {
-                toastr.error("Problemas de conexion", "Error");
+                toastr.error("Problemas de conexión", "Ups!");
             }
         });
     }
@@ -461,7 +455,7 @@ $(document).ready(function () {
     function checkreload() {
         $.ajax({
             method: "POST",
-            url: "./Controlador/ControlSesion.php",
+            url: "http://localhost:4567/user/auth",
             data: "opc=4",
             success: function (data) {
                 if (data.includes("otra sesión")) {
