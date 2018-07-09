@@ -66,7 +66,7 @@ $(document).ready(function () {
             busqueda = busqueda.trim();
             if (busqueda != busquedaux) {
                 busquedaux = busqueda;
-                searchItems(keywordsToJson(busqueda));
+                searchItems(busqueda);
             }
         }, 500);
     });
@@ -221,16 +221,19 @@ $(document).ready(function () {
                 { title: "Precio" },
                 { title: "Oferta" }
             ],
-           responsive: true,
-           bFilter: false,
+            responsive: true,
+            bFilter: false,
         });
     }
 
-    function searchItems(keywords){
-       $.ajax({
+    function searchItems(keywords) {
+        var request = buildItemRequest(keywords);
+        console.log(request);
+        $.ajax({
             method: "POST",
+            dataType: "json",
             url: "http://localhost:4567/item/search",
-            data: keywords,
+            data: request,
             success: function (data) {
                 console.log("Search done");
                 console.log(data);
@@ -243,10 +246,19 @@ $(document).ready(function () {
         });
     }
 
-    function keywordsToJson(str){
+    function keywordsToJson(str) {
         var list = str.split(" ");
         var filtered = list.filter(a => a !== '');
-        return "["+filtered.toString()+"]";
+        return '[' + filtered.toString() + ']';
+    }
+
+    function buildItemRequest(keywords) {
+        var request = '{'
+        request += '"username": "srosa", '; 
+        request += '"password": "1432"'; 
+        request += '}';
+        //"keywords": keywordsToJson(keywords)
+        return JSON.stringify(JSON.parse(request));
     }
 
     function setItemTable() {
