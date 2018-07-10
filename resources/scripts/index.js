@@ -210,6 +210,7 @@ $(document).ready(function () {
     //FUNCION DATATABLES
 
     function createItemTable(dataSet) {
+        console.log(dataSet);
         tabla = $("#tabla").DataTable({
             data: dataSet,
             columns: [
@@ -237,8 +238,7 @@ $(document).ready(function () {
             success: function (data) {
                 console.log("Search done");
                 console.log(data);
-                var obj = JSON.parse(data);
-                tabla.clear().rows.add(obj).draw();
+                tabla.clear().rows.add(data).draw();
             },
             error: function () {
                 toastr.error("Problemas de conexión", "Ups!");
@@ -253,12 +253,17 @@ $(document).ready(function () {
     }
 
     function buildItemRequest(keywords) {
-        var request = '{'
+        var request = {
+            username : 'srosa',
+            password : '1432',
+            keywords : keywordsToJson(keywords)
+        }
+        /*var request = '{'
         request += '"username": "srosa", '; 
         request += '"password": "1432"'; 
-        request += '}';
+        request += '}';*/
         //"keywords": keywordsToJson(keywords)
-        return JSON.stringify(JSON.parse(request));
+        return JSON.stringify(request);
     }
 
     function setItemTable() {
