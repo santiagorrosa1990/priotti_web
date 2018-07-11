@@ -258,11 +258,6 @@ $(document).ready(function () {
             password : '1432',
             keywords : keywordsToJson(keywords)
         }
-        /*var request = '{'
-        request += '"username": "srosa", '; 
-        request += '"password": "1432"'; 
-        request += '}';*/
-        //"keywords": keywordsToJson(keywords)
         return JSON.stringify(request);
     }
 
