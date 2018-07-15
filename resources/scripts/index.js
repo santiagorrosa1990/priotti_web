@@ -24,7 +24,7 @@ $(document).ready(function () {
     //actfechas();
 
     //Compruebo sesión existente en recarga de pagina
-    //checkreload();
+    checkSession();
 
     //NAV BAR
 
@@ -87,26 +87,61 @@ $(document).ready(function () {
 
     //Boton Iniciar Sesion
     $("#entrar").on("click", function (e) {
-        var datos = $("#datosingreso").serialize() + '&opc=1';
-        $("#usuario").val("");
-        $("#clave").val("");
-        $.ajax({
-            method: "POST",
-            url: "./Controlador/ControlSesion.php",
-            data: datos,
-            success: function (data) {
-                iniciarsesion(data);
-            },
-            error: function () {
-                toastr.error("Error de servidor", "Error");
-            }
-        });
+        login(buildLoginRequest());
         return false;
     });
 
+    function login(data) {
+        $.ajax({
+            method: "POST",
+            url: "http://localhost:4567/login",
+            data: data,
+            statusCode: {
+                200: function (data) {
+                    var username = parseJwt(data).username;
+                    toastr.success("Bienvenido, " + username);
+                    $("#datosingreso").slideUp();
+                    $("#datossesion p").text(username);
+                    $("#datossesion").removeClass("oculto");
+                    setCookie(data);
+                },
+                403: function () {
+                    toastr.error("Credenciales incorrectas", "Ups!");
+                },
+                0: function () {
+                    toastr.error("Servidor no disponible", "Ups!");
+                }
+            }
+        });
+    }
+
+    function parseJwt (token) { //Ver si esto queda asi o no
+        var base64Url = token.split('.')[1];
+        var base64 = base64Url.replace('-', '+').replace('_', '/');
+        return JSON.parse(window.atob(base64));
+    };
+
+    function setCookie(data) {
+        //document.cookie = "username=" + data;
+        localStorage.jwt = data;
+        localStorage.username = parseJwt(data).username;
+    }
+
+    function buildLoginRequest() {
+        var credentials = {
+            credentials: {
+                username: $("#usuario").val(),
+                password: $("#clave").val()
+            }
+        }
+        $("#usuario").val("");
+        $("#clave").val("");
+        return JSON.stringify(credentials);
+    }
+
     //Cerrar Sesion
     $("#salir").on("click", function (e) {
-        cerrarsesion();
+        logout();
     });
 
     //Ver sólo ofertas
@@ -254,9 +289,9 @@ $(document).ready(function () {
 
     function buildItemRequest(keywords) {
         var request = {
-            username : 'srosa',
-            password : '1432',
-            keywords : keywordsToJson(keywords)
+            username: 'srosa',
+            password: '1432',
+            keywords: keywordsToJson(keywords)
         }
         return JSON.stringify(request);
     }
@@ -342,8 +377,24 @@ $(document).ready(function () {
         }
     }
 
-    function cerrarsesion() {
-        $.ajax({
+    function logout() {
+        localStorage.removeItem("username");
+        $("#datossesion").addClass("oculto");
+        //$("#bofertas").addClass("oculto");
+        //$("#bdescargarlista").addClass("oculto");
+        $("#datossesion p").text("");
+        $("#datosingreso").slideDown(500);
+        $("#usuario").val("");
+        $("#clave").val("");
+        toastr.info(data);
+        //$('#clientes').addClass('oculto');
+        //botoncarrito(false);//Saco el boton de carrito
+        //toggleprecios();
+        //toggleCarrito(false);
+        //vertogglescolumnas(false);
+        //resettogglescolumnas();
+        
+        /*$.ajax({
             method: "POST",
             url: "./Controlador/ControlSesion.php",
             data: "opc=3",
@@ -365,7 +416,7 @@ $(document).ready(function () {
                     toastr.info(data);
                 }
             }
-        });
+        });*/
     }
 
     function descargarxlsx() {
@@ -464,10 +515,10 @@ $(document).ready(function () {
         }
     }
 
-    function checkreload() {
+    function checkreload() { //TODO quitar
         $.ajax({
             method: "POST",
-            url: "http://localhost:4567/user/auth",
+            url: "http://localhost:4567/login",
             data: "opc=4",
             success: function (data) {
                 if (data.includes("otra sesión")) {
@@ -481,6 +532,38 @@ $(document).ready(function () {
                 alert("error de servidor");
             }
         });
+    }
+
+    function checkSession() {
+        if (cookieSessionExist()) {
+            var username = localStorage.username//getCookie("username");
+            toastr.success("Bienvenido " + username);
+            $("#datossesion p").text(username);
+            $("#datossesion").removeClass("oculto");
+            //Que hacer si la sesion existe
+        } else {
+            $("#datosingreso").slideDown(500);
+            //Que hacer si no existe
+        }
+    }
+
+    function cookieSessionExist() {
+        //return getCookie("username") != ""; 
+        return localStorage.jwt != null;
+        //TODO ver TOKEN AUTH
+    }
+
+    function getCookie(cname) {
+        var cookie = document.cookie;
+        var ca = cookie.split(',');
+        for (var i = 0; i < ca.length; i++) {
+            var c = ca[i];
+            var pair = c.split('=');
+            if (cname == pair[0]) {
+                return pair[1];
+            }
+        }
+        return "";
     }
 
     function setjumbo(dis, subdis) {
