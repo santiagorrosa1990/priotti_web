@@ -106,16 +106,16 @@ $(document).ready(function () {
                     setCookie(data);
                 },
                 403: function () {
-                    toastr.error("Credenciales incorrectas", "Ups!");
+                    toastr.error("Datos incorrectos", "Ups!");
                 },
                 0: function () {
-                    toastr.error("Servidor no disponible", "Ups!");
+                    toastr.error("Servicio no disponible", "Ups!");
                 }
             }
         });
     }
 
-    function parseJwt (token) { //Ver si esto queda asi o no
+    function parseJwt(token) { //Ver si esto queda asi o no
         var base64Url = token.split('.')[1];
         var base64 = base64Url.replace('-', '+').replace('_', '/');
         return JSON.parse(window.atob(base64));
@@ -123,7 +123,7 @@ $(document).ready(function () {
 
     function setCookie(data) {
         //document.cookie = "username=" + data;
-        localStorage.jwt = data;
+        localStorage.token = data;
         localStorage.username = parseJwt(data).username;
     }
 
@@ -245,7 +245,6 @@ $(document).ready(function () {
     //FUNCION DATATABLES
 
     function createItemTable(dataSet) {
-        console.log(dataSet);
         tabla = $("#tabla").DataTable({
             data: dataSet,
             columns: [
@@ -264,19 +263,21 @@ $(document).ready(function () {
 
     function searchItems(keywords) {
         var request = buildItemRequest(keywords);
-        console.log(request);
         $.ajax({
             method: "POST",
             dataType: "json",
             url: "http://localhost:4567/item/search",
             data: request,
-            success: function (data) {
-                console.log("Search done");
-                console.log(data);
-                tabla.clear().rows.add(data).draw();
-            },
-            error: function () {
-                toastr.error("Problemas de conexión", "Ups!");
+            statusCode: {
+                200: function (data) {
+                    tabla.clear().rows.add(data).draw();
+                },
+                403: function (data) {
+                    toastr.error("No autorizado", "Ups!");
+                },
+                0: function (data) {
+                    toastr.error("Servicio no disponible", "Ups!");
+                }
             }
         });
     }
@@ -289,8 +290,7 @@ $(document).ready(function () {
 
     function buildItemRequest(keywords) {
         var request = {
-            username: 'srosa',
-            password: '1432',
+            token: localStorage.token,
             keywords: keywordsToJson(keywords)
         }
         return JSON.stringify(request);
@@ -377,8 +377,13 @@ $(document).ready(function () {
         }
     }
 
-    function logout() {
+    function clearLocalStorage() {
         localStorage.removeItem("username");
+        localStorage.removeItem("token");
+    }
+
+    function logout() {
+        clearLocalStorage();
         $("#datossesion").addClass("oculto");
         //$("#bofertas").addClass("oculto");
         //$("#bdescargarlista").addClass("oculto");
@@ -386,14 +391,13 @@ $(document).ready(function () {
         $("#datosingreso").slideDown(500);
         $("#usuario").val("");
         $("#clave").val("");
-        toastr.info(data);
         //$('#clientes').addClass('oculto');
         //botoncarrito(false);//Saco el boton de carrito
         //toggleprecios();
         //toggleCarrito(false);
         //vertogglescolumnas(false);
         //resettogglescolumnas();
-        
+
         /*$.ajax({
             method: "POST",
             url: "./Controlador/ControlSesion.php",
@@ -549,7 +553,7 @@ $(document).ready(function () {
 
     function cookieSessionExist() {
         //return getCookie("username") != ""; 
-        return localStorage.jwt != null;
+        return localStorage.token != null;
         //TODO ver TOKEN AUTH
     }
 
