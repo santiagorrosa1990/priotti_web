@@ -18,7 +18,8 @@ $(document).ready(function () {
 
     //CARGA INICIAL
     //tablaproductos();
-    setItemTable();
+    //setFullItemTable();
+    setItemTable(); //Aca se decide si es full o basic
     showtablap(true);
     clickednav($("#productos"));
     //actfechas();
@@ -104,6 +105,7 @@ $(document).ready(function () {
                     $("#datossesion p").text(username);
                     $("#datossesion").removeClass("oculto");
                     setCookie(data);
+                    setItemTable();
                 },
                 403: function () {
                     toastr.error("Datos incorrectos", "Ups!");
@@ -244,29 +246,20 @@ $(document).ready(function () {
 
     //FUNCION DATATABLES
 
-    function createItemTable(dataSet) {
-        tabla = $("#tabla").DataTable({
-            data: dataSet,
-            columns: [
-                { title: "Codigo" },
-                { title: "Aplicación" },
-                { title: "Rubro" },
-                { title: "Marca." },
-                { title: "Equivalencia" },
-                { title: "Precio" },
-                { title: "Oferta" }
-            ],
-            responsive: true,
-            bFilter: false,
-        });
-    }
+
 
     function searchItems(keywords) {
         var request = buildItemRequest(keywords);
+        var uri;
+        if (localStorage.token != null) {
+            uri = "http://localhost:4567/item/full";
+        } else {
+            uri = "http://localhost:4567/item/basic";
+        }
         $.ajax({
             method: "POST",
             dataType: "json",
-            url: "http://localhost:4567/item/search",
+            url: uri,
             data: request,
             statusCode: {
                 200: function (data) {
@@ -296,17 +289,49 @@ $(document).ready(function () {
         return JSON.stringify(request);
     }
 
-    function setItemTable() {
-        $.ajax({
-            method: "GET",
-            url: "http://localhost:4567/item",
-            success: function (data) {
-                createItemTable(data);
-            },
-            error: function () {
-                toastr.error("Problemas de conexión", "Ups!");
-            }
+    function renderFullItemTable(dataSet) {
+        tabla = $("#tabla").DataTable({
+            data: dataSet,
+            columns: [
+                { title: "Codigo" },
+                { title: "Aplicación" },
+                { title: "Rubro" },
+                { title: "Marca." },
+                { title: "Equivalencia" },
+                { title: "Precio" },
+                { title: "Oferta" }
+            ],
+            responsive: true,
+            bFilter: false,
         });
+    }
+
+    function renderBasicItemTable(dataSet) {
+        tabla = $("#tabla").DataTable({
+            data: dataSet,
+            columns: [
+                { title: "Codigo" },
+                { title: "Aplicación" },
+                { title: "Rubro" },
+                { title: "Marca." },
+            ],
+            responsive: true,
+            bFilter: false,
+        });
+    }
+
+    function setItemTable() {
+        if (tabla != null) {
+            tabla.destroy();
+            $("#tabla").slideUp();
+            $("#tabla").empty();
+        }
+        if (localStorage.token != null) {
+            renderFullItemTable(searchItems(busqueda));
+        } else {
+            renderBasicItemTable(searchItems(busqueda));
+        }
+        $("#tabla").slideDown();
     }
 
     //FUNCIONES
@@ -384,6 +409,7 @@ $(document).ready(function () {
 
     function logout() {
         clearLocalStorage();
+        setItemTable();
         $("#datossesion").addClass("oculto");
         //$("#bofertas").addClass("oculto");
         //$("#bdescargarlista").addClass("oculto");
