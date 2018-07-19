@@ -1,7 +1,7 @@
 $(document).ready(function () {
 
     var coef = 1;
-    var coef2 = 1;
+    //var coef2 = 1;
     var tabla = null;
     var tablac = null;
     var tablahc = null;
@@ -15,6 +15,8 @@ $(document).ready(function () {
     var tipolista = 2;
     var confotos = false;
     var op = false;
+    var onlyOffers = false;
+    var onlyNovelties = false;
 
     //CARGA INICIAL
     //tablaproductos();
@@ -25,7 +27,7 @@ $(document).ready(function () {
     //actfechas();
 
     //Compruebo sesión existente en recarga de pagina
-    checkSession();
+    checkOnReload();
 
     //NAV BAR
 
@@ -76,13 +78,13 @@ $(document).ready(function () {
     $("#coefreventa").on("change paste keyup", function () {
         clearTimeout(timeout);
         timeout = setTimeout(function () {
-            coef2 = $("#coefreventa").val();
-            if (isNaN(coef2)) {
-                coef2 = 1;
+            coef = $("#coefreventa").val();
+            if (isNaN(coef)) {
+                coef = 1;
             } else {
-                coef2 = coef2 / 100 + 1;
+                coef = coef / 100 + 1;
             }
-            tabla.ajax.reload();
+            searchItems(busqueda);
         }, 500);
     });
 
@@ -104,7 +106,9 @@ $(document).ready(function () {
                     $("#datosingreso").slideUp();
                     $("#datossesion p").text(username);
                     $("#datossesion").removeClass("oculto");
-                    setCookie(data);
+                    $("#bofertas").removeClass("oculto");
+                    viewColumnToggles(true);
+                    setLocalStorage(data);
                     setItemTable();
                 },
                 403: function () {
@@ -123,7 +127,7 @@ $(document).ready(function () {
         return JSON.parse(window.atob(base64));
     };
 
-    function setCookie(data) {
+    function setLocalStorage(data) {
         //document.cookie = "username=" + data;
         localStorage.token = data;
         localStorage.username = parseJwt(data).username;
@@ -150,10 +154,8 @@ $(document).ready(function () {
     $("#bofertas").on("click", function () {
         unpressed();
         $(this).addClass("active btn-info");
-        if (tipolista != 3) {
-            tipolista = 3;
-            tabla.ajax.reload();
-        }
+        onlyOffers = true;
+        searchItems(busqueda);
         return false;
     });
 
@@ -161,10 +163,9 @@ $(document).ready(function () {
     $("#btodos").on("click", function () {
         unpressed();
         $(this).addClass("active btn-info");
-        if (tipolista != 2) {
-            tipolista = 2;
-            tabla.ajax.reload();
-        }
+        onlyNovelties = false;
+        onlyOffers = false;
+        searchItems(busqueda);
         return false;
     });
 
@@ -172,12 +173,18 @@ $(document).ready(function () {
     $("#bnovedades").on("click", function () {
         unpressed();
         $(this).addClass("active btn-info");
-        if (tipolista != 4) {
-            tipolista = 4;
-            tabla.ajax.reload();
-        }
+        onlyNovelties = true;
+        searchItems(busqueda);
         return false;
     });
+
+    function unpressed() {
+        $("#btodos").removeClass("active btn-info");
+        $("#bofertas").removeClass("active btn-info");
+        $("#bnovedades").removeClass("active btn-info");
+        onlyNovelties = false;
+        onlyOffers = false;
+    }
 
     //Toggles de las columnas de la tabla
     $('.toggle-vis').on('click', function (e) {
@@ -250,6 +257,7 @@ $(document).ready(function () {
 
     function searchItems(keywords) {
         var request = buildItemRequest(keywords);
+        console.log(request);
         var uri;
         if (localStorage.token != null) {
             uri = "http://localhost:4567/item/full";
@@ -275,7 +283,7 @@ $(document).ready(function () {
         });
     }
 
-    function keywordsToJson(str) {
+    function keywordsToJson(str) { //Hacerlo en la
         var list = str.split(" ");
         var filtered = list.filter(a => a !== '');
         return '[' + filtered.toString() + ']';
@@ -284,7 +292,9 @@ $(document).ready(function () {
     function buildItemRequest(keywords) {
         var request = {
             token: localStorage.token,
-            keywords: keywordsToJson(keywords)
+            keywords: keywords,
+            offer: onlyOffers,
+            novelty: onlyNovelties,
         }
         return JSON.stringify(request);
     }
@@ -292,17 +302,79 @@ $(document).ready(function () {
     function renderFullItemTable(dataSet) {
         tabla = $("#tabla").DataTable({
             data: dataSet,
+            responsive: true,
+            bFilter: false,
             columns: [
                 { title: "Codigo" },
                 { title: "Aplicación" },
-                { title: "Rubro" },
                 { title: "Marca." },
+                { title: "Rubro" },
                 { title: "Equivalencia" },
                 { title: "Precio" },
-                { title: "Oferta" }
+                { title: "Oferta" },
+                { title: "Neto" },
+                { title: "Revendedor" },
+                { title: "Imagen" }
             ],
-            responsive: true,
-            bFilter: false,
+            columnDefs:
+                [
+                    {
+                        targets: [5], //Precio
+                        responsivePriority: 1,
+                        render: function (data, type, row) {
+                            if (Number(row[6]) == 0) {
+                                return '$' + Number(data).toFixed(2);
+                            } else {
+                                return '<div class="tachado"> $ ' + Number(data).toFixed(2) + '</div>';
+                            }
+                        }
+                    },
+                    {
+                        targets: [4], //Equivalencia
+                        visible: false
+                    },
+                    {
+                        targets: [6], //Oferta
+                        responsivePriority: 0,
+                        render: function (data, type, row) {
+                            if (row[6] == 0) {
+                                return "---";
+                            } else {
+                                return '$' + Number(data).toFixed(2);
+                            }
+
+                        },
+                    },
+                    {
+                        targets: [7], //Neto
+                        responsivePriority: 1,
+                        render: function (data, type, row) {
+                            if (row[6] == 0) {
+                                return "---";
+                            } else {
+                                return '$' + Number(row[6] * 0.5643).toFixed(2);
+                            }
+
+                        },
+                    },
+                    {
+                        targets: [8], //Reventa
+                        responsivePriority: 1,
+                        render: function (data, type, row) {
+                            return '$' + (row[5] * coef).toFixed(2);
+                        },
+                        visible: false
+                    },
+                    {
+                        targets: [9], //Foto
+                        render: function (data, type, row) {
+                            if (confotos == 0) return row[7];
+                            var error = "javascript:this.src='http://localhost:3000/fotos/default.jpg'";
+                            return '<img src="http://localhost:3000/fotos/' + row[7] + '.jpg" onerror="' + error + '" id="myImg">';
+                        },
+                        visible: false
+                    }
+                ],
         });
     }
 
@@ -312,8 +384,8 @@ $(document).ready(function () {
             columns: [
                 { title: "Codigo" },
                 { title: "Aplicación" },
-                { title: "Rubro" },
                 { title: "Marca." },
+                { title: "Rubro" },
             ],
             responsive: true,
             bFilter: false,
@@ -322,7 +394,7 @@ $(document).ready(function () {
 
     function setItemTable() {
         if (tabla != null) {
-            tabla.destroy();
+            tabla.destroy(); //esto no hace falta
             $("#tabla").slideUp();
             $("#tabla").empty();
         }
@@ -370,12 +442,6 @@ $(document).ready(function () {
         }
     }
 
-    function unpressed() {
-        $("#btodos").removeClass("active btn-info");
-        $("#bofertas").removeClass("active btn-info");
-        $("#bnovedades").removeClass("active btn-info");
-    }
-
     function iniciarsesion(data) {
         if (data.includes('["')) {
             data = JSON.parse(data);
@@ -410,8 +476,10 @@ $(document).ready(function () {
     function logout() {
         clearLocalStorage();
         setItemTable();
+        viewColumnToggles(false);
+        unpressed();
         $("#datossesion").addClass("oculto");
-        //$("#bofertas").addClass("oculto");
+        $("#bofertas").addClass("oculto");
         //$("#bdescargarlista").addClass("oculto");
         $("#datossesion p").text("");
         $("#datosingreso").slideDown(500);
@@ -423,30 +491,6 @@ $(document).ready(function () {
         //toggleCarrito(false);
         //vertogglescolumnas(false);
         //resettogglescolumnas();
-
-        /*$.ajax({
-            method: "POST",
-            url: "./Controlador/ControlSesion.php",
-            data: "opc=3",
-            success: function (data) {
-                if (data.includes('cerrada')) {
-                    $("#datossesion").addClass("oculto");
-                    $("#bofertas").addClass("oculto");
-                    $("#bdescargarlista").addClass("oculto");
-                    $("#datossesion p").text("");
-                    $("#datosingreso").slideDown(500);
-                    $("#usuario").val("");
-                    $("#clave").val("");
-                    //$('#clientes').addClass('oculto');
-                    botoncarrito(false);//Saco el boton de carrito
-                    toggleprecios();
-                    toggleCarrito(false);
-                    vertogglescolumnas(false);
-                    resettogglescolumnas();
-                    toastr.info(data);
-                }
-            }
-        });*/
     }
 
     function descargarxlsx() {
@@ -492,7 +536,7 @@ $(document).ready(function () {
         }
     }
 
-    function vertogglescolumnas(op) {
+    function viewColumnToggles(op) {
         if (op == true) {
             $('#togglera').show();
         } else {
@@ -533,7 +577,7 @@ $(document).ready(function () {
     function togglefotos() {
         if (tablaexiste()) {
             confotos = !confotos;
-            tabla.ajax.reload();
+            searchItems(busqueda);
         }
     }
 
@@ -545,35 +589,16 @@ $(document).ready(function () {
         }
     }
 
-    function checkreload() { //TODO quitar
-        $.ajax({
-            method: "POST",
-            url: "http://localhost:4567/login",
-            data: "opc=4",
-            success: function (data) {
-                if (data.includes("otra sesión")) {
-                    toastr.error(data);
-                } else {
-                    resettogglescolumnas();
-                    iniciarsesion(data);
-                }
-            },
-            error: function () {
-                alert("error de servidor");
-            }
-        });
-    }
-
-    function checkSession() {
+    function checkOnReload() {
         if (cookieSessionExist()) {
-            var username = localStorage.username//getCookie("username");
+            var username = localStorage.username
             toastr.success("Bienvenido " + username);
             $("#datossesion p").text(username);
             $("#datossesion").removeClass("oculto");
-            //Que hacer si la sesion existe
+            $("#bofertas").removeClass("oculto");
+            viewColumnToggles(true);
         } else {
             $("#datosingreso").slideDown(500);
-            //Que hacer si no existe
         }
     }
 
@@ -581,19 +606,6 @@ $(document).ready(function () {
         //return getCookie("username") != ""; 
         return localStorage.token != null;
         //TODO ver TOKEN AUTH
-    }
-
-    function getCookie(cname) {
-        var cookie = document.cookie;
-        var ca = cookie.split(',');
-        for (var i = 0; i < ca.length; i++) {
-            var c = ca[i];
-            var pair = c.split('=');
-            if (cname == pair[0]) {
-                return pair[1];
-            }
-        }
-        return "";
     }
 
     function setjumbo(dis, subdis) {
