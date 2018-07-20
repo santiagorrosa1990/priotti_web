@@ -19,11 +19,10 @@ $(document).ready(function () {
     var onlyNovelties = false;
 
     //CARGA INICIAL
-    //tablaproductos();
-    //setFullItemTable();
     setItemTable(); //Aca se decide si es full o basic
     showtablap(true);
     clickednav($("#productos"));
+    renderCartTable();
     //actfechas();
 
     //Compruebo sesión existente en recarga de pagina
@@ -114,7 +113,7 @@ $(document).ready(function () {
 
                     //tablacarrito();
                     //tablahistcompras();
-                    
+
                     /*
                     $("#bdescargarlista").removeClass("oculto");
                     vertogglescolumnas(true);
@@ -265,7 +264,6 @@ $(document).ready(function () {
 
     function searchItems(keywords) {
         var request = buildItemRequest(keywords);
-        console.log(request);
         var uri;
         if (localStorage.token != null) {
             uri = "http://localhost:4567/item/full";
@@ -291,12 +289,6 @@ $(document).ready(function () {
         });
     }
 
-    function keywordsToJson(str) { //Hacerlo en la
-        var list = str.split(" ");
-        var filtered = list.filter(a => a !== '');
-        return '[' + filtered.toString() + ']';
-    }
-
     function buildItemRequest(keywords) {
         var request = {
             token: localStorage.token,
@@ -307,9 +299,8 @@ $(document).ready(function () {
         return JSON.stringify(request);
     }
 
-    function renderFullItemTable(dataSet) {
+    function renderFullItemTable() {
         tabla = $("#tabla").DataTable({
-            data: dataSet,
             responsive: true,
             bFilter: false,
             columns: [
@@ -384,11 +375,11 @@ $(document).ready(function () {
                     }
                 ],
         });
+        searchItems(busqueda);
     }
 
-    function renderBasicItemTable(dataSet) {
+    function renderBasicItemTable() {
         tabla = $("#tabla").DataTable({
-            data: dataSet,
             columns: [
                 { title: "Codigo" },
                 { title: "Aplicación" },
@@ -398,18 +389,20 @@ $(document).ready(function () {
             responsive: true,
             bFilter: false,
         });
+        searchItems(busqueda);
     }
 
     function setItemTable() {
         if (tabla != null) {
-            tabla.destroy(); //esto no hace falta
+            tabla.destroy();
             $("#tabla").slideUp();
             $("#tabla").empty();
         }
+        searchItems(busqueda); //Ajax es asíncrono =O
         if (localStorage.token != null) {
-            renderFullItemTable(searchItems(busqueda));
+            renderFullItemTable();
         } else {
-            renderBasicItemTable(searchItems(busqueda));
+            renderBasicItemTable();
         }
         $("#tabla").slideDown();
     }
@@ -559,17 +552,17 @@ $(document).ready(function () {
         $('#fotos').prop('checked', false);
 
         $('#aplicacion').prop('checked', true);
-    
+
         $('#marca').prop('checked', true);
-        
+
         $('#rubro').prop('checked', true);
-        
+
         $('#equivalencias').prop('checked', false);
-        
+
         $('#reventa').prop('checked', false);
-        
+
         $('#revendedor').hide();
-       // $('#coefreventa').val('');
+        // $('#coefreventa').val('');
     }
 
     function toggleequiv() {
@@ -602,6 +595,7 @@ $(document).ready(function () {
             $("#datossesion").removeClass("oculto");
             $("#bofertas").removeClass("oculto");
             viewColumnToggles(true);
+            $('#botoncarrito').show();
         } else {
             $("#datosingreso").slideDown(500);
         }
@@ -731,26 +725,6 @@ $(document).ready(function () {
         return false;
     });
 
-    //Agregar al carrito
-    $('#tabla').on('dblclick', 'tr', function () {
-        //console.log(tabla.row(fila).data());
-        var fila = tabla.row(this).data();
-        opccarrito = 2;
-        articulo = fila['codigo'] + '&' + fila['marca'] + '&0';
-        tablac.ajax.reload();
-        return false;
-    });
-
-    //Quitar del carrito
-    $('#tablac').on('click', '#cruzroja', function () {
-        var fila = $(this).parents('tr');
-        var fila = tablac.row(fila).data();
-        opccarrito = 3;
-        articulo = fila['codigo'];
-        tablac.ajax.reload();
-        return false;
-    });
-
     //Actualizar cantidad por item
     $("#tablac").on("change paste keyup", "input", function () {
         cantidad = $(this).val();
@@ -787,11 +761,102 @@ $(document).ready(function () {
         return false;
     });
 
-    function tablacarrito() {
-        if (tablac != null) {
-            tablac.ajax.reload();
-            return false;
-        }
+    function renderCartTable() {
+        tablac = $("#tablac").DataTable({
+            responsive: true,
+            bFilter: false,
+            columns: [
+                { title: "Codigo", width: "40%" },
+                { title: "Marca", width: "25%" },
+                { title: "Cantidad", width: "25%" },
+                { title: "Quitar", width: "10%" },
+            ],
+            columnDefs: [
+                {
+                    responsivePriority: 2,
+                    targets: [2], //Cantidad
+                    orderable: false,
+                    render: function (data, type, row) {
+                        return '<input class="width55 form-control" value=' + row[2] + ' type="text">';
+                    }
+                },
+                {
+                    responsivePriority: 0,
+                    targets: [3], //Boton quitar de pedido 
+                    orderable: false,
+                    render: function () {
+                        return '<i class="fa fa-times fa-2x rojo" id="cruzroja" aria-hidden="true"></i>';
+                    }
+                },
+            ]
+        });
+        refreshCartTable();
+    }
+
+    function refreshCartTable() {
+        var request = "wewe";
+        $.ajax({
+            method: "POST",
+            dataType: "json",
+            url: "http://localhost:4567/item/cart",
+            data: request,
+            statusCode: {
+                200: function (data) {
+                    tablac.clear().rows.add(data).draw();
+                },
+                403: function (data) {
+                    toastr.error("Carrito no disponible", "Ups!");
+                },
+                0: function (data) {
+                    toastr.error("Servicio no disponible", "Ups!");
+                }
+            }
+        });
+    }
+
+    //ADD TO CART
+    $('#tabla').on('dblclick', 'tr', function () {
+        var fila = tabla.row(this).data();
+        articulo = fila[0] + '&' + fila[2] + '&0';
+        console.log(articulo);
+        refreshCartTable();//Agregar parametros
+        return false;
+    });
+
+    //REMOVE FROM CART
+    $('#tablac').on('click', '#cruzroja', function () {
+        var fila = $(this).parents('tr');
+        var fila = tablac.row(fila).data();
+        opccarrito = 3;
+        articulo = fila[0];
+        console.log(articulo);
+        refreshCartTable(); //Agregar parametros 
+        return false;
+    });
+
+    /*/Agregar al carrito
+    $('#tabla').on('dblclick', 'tr', function () {
+        //console.log(tabla.row(fila).data());
+        var fila = tabla.row(this).data();
+        opccarrito = 2;
+        articulo = fila['codigo'] + '&' + fila['marca'] + '&0';
+        tablac.ajax.reload();
+        return false;
+    });
+
+    //Quitar del carrito
+    $('#tablac').on('click', '#cruzroja', function () {
+        var fila = $(this).parents('tr');
+        var fila = tablac.row(fila).data();
+        opccarrito = 3;
+        articulo = fila['codigo'];
+        tablac.ajax.reload();
+        return false;
+    });*/
+
+    /*function tablacarrito() {
+        
+        
         tablac = $("#tablac").DataTable({
             "bFilter": false,
             "pageLength": 50,
@@ -835,7 +900,7 @@ $(document).ready(function () {
                 },
             ]
         });
-    }
+    }*/
 
     function tablahistcompras() {
         if (tablahc != null) {
