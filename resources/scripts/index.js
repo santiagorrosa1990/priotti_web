@@ -107,9 +107,18 @@ $(document).ready(function () {
                     $("#datossesion p").text(username);
                     $("#datossesion").removeClass("oculto");
                     $("#bofertas").removeClass("oculto");
+                    $('#botoncarrito').show();
                     viewColumnToggles(true);
                     setLocalStorage(data);
                     setItemTable();
+
+                    //tablacarrito();
+                    //tablahistcompras();
+                    
+                    /*
+                    $("#bdescargarlista").removeClass("oculto");
+                    vertogglescolumnas(true);
+                    resettogglescolumnas();*/
                 },
                 403: function () {
                     toastr.error("Datos incorrectos", "Ups!");
@@ -121,14 +130,13 @@ $(document).ready(function () {
         });
     }
 
-    function parseJwt(token) { //Ver si esto queda asi o no
+    function parseJwt(token) { //@Smell
         var base64Url = token.split('.')[1];
         var base64 = base64Url.replace('-', '+').replace('_', '/');
         return JSON.parse(window.atob(base64));
     };
 
     function setLocalStorage(data) {
-        //document.cookie = "username=" + data;
         localStorage.token = data;
         localStorage.username = parseJwt(data).username;
     }
@@ -485,6 +493,8 @@ $(document).ready(function () {
         $("#datosingreso").slideDown(500);
         $("#usuario").val("");
         $("#clave").val("");
+        $('#botoncarrito').hide();
+        toggleCarrito(false);
         //$('#clientes').addClass('oculto');
         //botoncarrito(false);//Saco el boton de carrito
         //toggleprecios();
@@ -538,6 +548,7 @@ $(document).ready(function () {
 
     function viewColumnToggles(op) {
         if (op == true) {
+            resettogglescolumnas();
             $('#togglera').show();
         } else {
             $('#togglera').hide();
@@ -546,25 +557,19 @@ $(document).ready(function () {
 
     function resettogglescolumnas() {
         $('#fotos').prop('checked', false);
-        var column = tabla.column(9);
-        column.visible(false);
+
         $('#aplicacion').prop('checked', true);
-        var column = tabla.column(1);
-        column.visible(true);
+    
         $('#marca').prop('checked', true);
-        var column = tabla.column(2);
-        column.visible(true);
+        
         $('#rubro').prop('checked', true);
-        var column = tabla.column(3);
-        column.visible(true);
+        
         $('#equivalencias').prop('checked', false);
-        var column = tabla.column(4);
-        column.visible(false);
+        
         $('#reventa').prop('checked', false);
-        var column = tabla.column(8);
-        column.visible(false);
+        
         $('#revendedor').hide();
-        $('#coefreventa').val('');
+       // $('#coefreventa').val('');
     }
 
     function toggleequiv() {
@@ -664,16 +669,6 @@ $(document).ready(function () {
         } else {
             $('#tablacontainer').removeClass('col-md-8').addClass('col-md-12');
             $('#carritocompra').addClass('oculto').slideUp();
-        }
-    }
-
-
-    //FUNCION PARA USUARIO DE TESTING
-    function botoncarrito($us) {
-        if ($us == true) {
-            $('#botoncarrito').show();
-        } else {
-            $('#botoncarrito').hide();
         }
     }
 
