@@ -22,7 +22,6 @@ $(document).ready(function () {
     setItemTable(); //Aca se decide si es full o basic
     showtablap(true);
     clickednav($("#productos"));
-    renderCartTable();
     //actfechas();
 
     //Compruebo sesión existente en recarga de pagina
@@ -95,6 +94,7 @@ $(document).ready(function () {
 
     function login(data) {
         $.ajax({
+            async: false,
             method: "POST",
             url: "http://localhost:4567/login",
             data: data,
@@ -110,7 +110,7 @@ $(document).ready(function () {
                     viewColumnToggles(true);
                     setLocalStorage(data);
                     setItemTable();
-
+                    renderCartTable();
                     //tablacarrito();
                     //tablahistcompras();
 
@@ -136,8 +136,10 @@ $(document).ready(function () {
     };
 
     function setLocalStorage(data) {
+        var parsed = parseJwt(data)
         localStorage.token = data;
-        localStorage.username = parseJwt(data).username;
+        localStorage.username = parsed.username;
+        localStorage.id = parsed.id;
     }
 
     function buildLoginRequest() {
@@ -471,6 +473,7 @@ $(document).ready(function () {
 
     function clearLocalStorage() {
         localStorage.removeItem("username");
+        localStorage.removeItem("id");
         localStorage.removeItem("token");
     }
 
@@ -596,6 +599,7 @@ $(document).ready(function () {
             $("#bofertas").removeClass("oculto");
             viewColumnToggles(true);
             $('#botoncarrito').show();
+            renderCartTable();
         } else {
             $("#datosingreso").slideDown(500);
         }
@@ -695,7 +699,7 @@ $(document).ready(function () {
                             //alert(datos);
                             $.ajax({
                                 method: "POST",
-                                url: "./Utils/email.php",
+                                url: "http://localhost:4567/item/emailorder",
                                 data: datos,
                                 success: function (data) {
                                     if (data.includes('enviado!')) {
@@ -732,10 +736,9 @@ $(document).ready(function () {
         clearTimeout(timeout);
         timeout = setTimeout(function () {
             fila = tablac.row(fila).data();
-            opccarrito = 4;
-            if (cantidad == "") cantidad = 0;
-            articulo = fila['codigo'] + '&' + fila['marca'] + '&' + cantidad;
-            tablac.ajax.reload();
+            if (isNaN(cantidad)) cantidad = 0;
+            item = fila[0] + '&' + fila[1] + '&' + cantidad;
+            updateCart(item);
         }, 500);
     });
 
@@ -762,47 +765,106 @@ $(document).ready(function () {
     });
 
     function renderCartTable() {
-        tablac = $("#tablac").DataTable({
-            responsive: true,
-            bFilter: false,
-            columns: [
-                { title: "Codigo", width: "40%" },
-                { title: "Marca", width: "25%" },
-                { title: "Cantidad", width: "25%" },
-                { title: "Quitar", width: "10%" },
-            ],
-            columnDefs: [
-                {
-                    responsivePriority: 2,
-                    targets: [2], //Cantidad
-                    orderable: false,
-                    render: function (data, type, row) {
-                        return '<input class="width55 form-control" value=' + row[2] + ' type="text">';
-                    }
-                },
-                {
-                    responsivePriority: 0,
-                    targets: [3], //Boton quitar de pedido 
-                    orderable: false,
-                    render: function () {
-                        return '<i class="fa fa-times fa-2x rojo" id="cruzroja" aria-hidden="true"></i>';
-                    }
-                },
-            ]
-        });
-        refreshCartTable();
+        if (tablac == null) {
+            tablac = $("#tablac").DataTable({
+                responsive: true,
+                bFilter: false,
+                columns: [
+                    { title: "Codigo", width: "40%" },
+                    { title: "Marca", width: "25%" },
+                    { title: "Cantidad", width: "25%" },
+                    { title: "Quitar", width: "10%" },
+                ],
+                columnDefs: [
+                    {
+                        responsivePriority: 2,
+                        targets: [2], //Cantidad
+                        orderable: false,
+                        render: function (data, type, row) {
+                            return '<input class="width55 form-control" value=' + row[2] + ' type="text">';
+                        }
+                    },
+                    {
+                        responsivePriority: 0,
+                        targets: [3], //Boton quitar de pedido 
+                        orderable: false,
+                        render: function () {
+                            return '<i class="fa fa-times fa-2x rojo" id="cruzroja" aria-hidden="true"></i>';
+                        }
+                    },
+                ]
+            });
+        }
+        refreshCartTable(null);
     }
 
-    function refreshCartTable() {
-        var request = "wewe";
+    function refreshCartTable(body) {
+        if(body == null){
+            var request = buildCartRequest();
+            $.ajax({
+                method: "POST",
+                dataType: "json",
+                url: "http://localhost:4567/item/getcart",
+                data: request,
+                statusCode: {
+                    200: function (data) {
+                        if (JSON.stringify(data) == '[[""]]') {
+                            tablac.clear().rows.add([]).draw();
+                        } else {
+                            tablac.clear().rows.add(data).draw();
+                        }
+                    },
+                    403: function (data) {
+                        toastr.error("Carrito no disponible", "Ups!");
+                    },
+                    0: function (data) {
+                        toastr.error("Servicio no disponible", "Ups!");
+                    }
+                }
+            });
+        }else{
+            tablac.clear().rows.add(body).draw();
+        }
+        
+    }
+
+    function buildCartRequest(item) {
+        var request = {
+            token: localStorage.token,
+            id: localStorage.id,
+            item: item
+        }
+        return JSON.stringify(request);
+    }
+
+    //ADD TO CART
+    $('#tabla').on('dblclick', 'tr', function () {
+        var fila = tabla.row(this).data();
+        item = fila[0] + '&' + fila[2] + '&0';
+        updateCart(item);
+        return false;
+    });
+
+    //REMOVE FROM CART
+    $('#tablac').on('click', '#cruzroja', function () {
+        var fila = $(this).parents('tr');
+        var fila = tablac.row(fila).data();
+        opccarrito = 3;
+        item = fila[0];
+        updateCart(item); 
+        return false;
+    });
+
+    function updateCart(item){
+        var request = buildCartRequest(item);
         $.ajax({
             method: "POST",
             dataType: "json",
-            url: "http://localhost:4567/item/cart",
+            url: "http://localhost:4567/item/updcart",
             data: request,
             statusCode: {
                 200: function (data) {
-                    tablac.clear().rows.add(data).draw();
+                    refreshCartTable(data);
                 },
                 403: function (data) {
                     toastr.error("Carrito no disponible", "Ups!");
@@ -812,27 +874,8 @@ $(document).ready(function () {
                 }
             }
         });
+        
     }
-
-    //ADD TO CART
-    $('#tabla').on('dblclick', 'tr', function () {
-        var fila = tabla.row(this).data();
-        articulo = fila[0] + '&' + fila[2] + '&0';
-        console.log(articulo);
-        refreshCartTable();//Agregar parametros
-        return false;
-    });
-
-    //REMOVE FROM CART
-    $('#tablac').on('click', '#cruzroja', function () {
-        var fila = $(this).parents('tr');
-        var fila = tablac.row(fila).data();
-        opccarrito = 3;
-        articulo = fila[0];
-        console.log(articulo);
-        refreshCartTable(); //Agregar parametros 
-        return false;
-    });
 
     /*/Agregar al carrito
     $('#tabla').on('dblclick', 'tr', function () {
