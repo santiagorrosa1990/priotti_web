@@ -695,8 +695,9 @@ $(document).ready(function () {
                         text: 'Enviar Pedido',
                         btnClass: 'btn-blue',
                         action: function () {
-                            var datos = $('#comentario').serialize() + '&opcemail=1';
+                            //var datos = $('#comentario').serialize() + '&opcemail=1';
                             //alert(datos);
+                            buildCartRequest();
                             $.ajax({
                                 method: "POST",
                                 url: "http://localhost:4567/item/emailorder",
