@@ -1,30 +1,22 @@
 $(document).ready(function () {
 
     var coef = 1;
-    //var coef2 = 1;
     var tabla = null;
     var tablac = null;
     var tablahc = null;
     var busqueda = "";
     var busquedaux = "";
     var cantidad = 0;
-    var opccarrito = 1;
-    var cantidadaux = 0;
-    var articulo = "";
     var timeout = null;
-    var tipolista = 2;
     var confotos = false;
-    var op = false;
     var onlyOffers = false;
     var onlyNovelties = false;
 
     //CARGA INICIAL
-    setItemTable(); //Aca se decide si es full o basic
+    setItemTable();
     showtablap(true);
     clickednav($("#productos"));
     //actfechas();
-
-    //Compruebo sesión existente en recarga de pagina
     checkOnReload();
 
     //NAV BAR
@@ -111,13 +103,9 @@ $(document).ready(function () {
                     setLocalStorage(data);
                     setItemTable();
                     renderCartTable();
-                    //tablacarrito();
-                    //tablahistcompras();
-
-                    /*
-                    $("#bdescargarlista").removeClass("oculto");
-                    vertogglescolumnas(true);
-                    resettogglescolumnas();*/
+                    renderCartHistoryTable();
+                    //$("#bdescargarlista").removeClass("oculto");
+                    
                 },
                 403: function () {
                     toastr.error("Datos incorrectos", "Ups!");
@@ -296,7 +284,7 @@ $(document).ready(function () {
             token: localStorage.token,
             keywords: keywords,
             offer: onlyOffers,
-            novelty: onlyNovelties,
+            novelty: onlyNovelties
         }
         return JSON.stringify(request);
     }
@@ -400,7 +388,7 @@ $(document).ready(function () {
             $("#tabla").slideUp();
             $("#tabla").empty();
         }
-        searchItems(busqueda); //Ajax es asíncrono =O
+        //searchItems(busqueda); //Ajax es asíncrono =O
         if (localStorage.token != null) {
             renderFullItemTable();
         } else {
@@ -472,9 +460,7 @@ $(document).ready(function () {
     }
 
     function clearLocalStorage() {
-        localStorage.removeItem("username");
-        localStorage.removeItem("id");
-        localStorage.removeItem("token");
+        localStorage.clear();
     }
 
     function logout() {
@@ -600,6 +586,7 @@ $(document).ready(function () {
             viewColumnToggles(true);
             $('#botoncarrito').show();
             renderCartTable();
+            renderCartHistoryTable();
         } else {
             $("#datosingreso").slideDown(500);
         }
@@ -670,7 +657,7 @@ $(document).ready(function () {
         }
     }
 
-    //Botón enviar pedido
+    //SEND ORDER
     $('#enviarpedido').on('click', function () {
         var valido = true;
         var cont = 0;
@@ -687,7 +674,7 @@ $(document).ready(function () {
                     '<form class="formName" id="comentario">' +
                     '<div class="form-group">' +
                     '<label>Comentarios:</label>' +
-                    '<textarea name="comentario" cols="50" rows="10" class="form-control" type="text"> Agregue aquí sus aclaraciones (transporte, etc)</textarea>' +
+                    '<textarea name="comentario" id="commentarea" cols="50" rows="10" class="form-control" type="text"> Agregue aquí sus aclaraciones (transporte, etc)</textarea>' +
                     '</div>' +
                     '</form>',
                 buttons: {
@@ -695,25 +682,24 @@ $(document).ready(function () {
                         text: 'Enviar Pedido',
                         btnClass: 'btn-blue',
                         action: function () {
-                            //var datos = $('#comentario').serialize() + '&opcemail=1';
-                            //alert(datos);
-                            buildCartRequest();
+                            var comments = $('#commentarea').val();
+                            var request = buildCartRequest(null, comments);
                             $.ajax({
                                 method: "POST",
                                 url: "http://localhost:4567/item/emailorder",
-                                data: datos,
-                                success: function (data) {
-                                    if (data.includes('enviado!')) {
-                                        toastr.success(data);
-                                        opccarrito = 1;
-                                        tablac.ajax.reload();
-                                        tablahc.ajax.reload();
-                                    } else {
-                                        toastr.error(data);
+                                data: request,
+                                statusCode: {
+                                    200: function (data) {
+                                        toastr.success("Pedido enviado");
+                                        refreshCartTable(null);
+                                        refreshCartHistoryTable(null);
+                                    },
+                                    403: function (data) {
+                                        toastr.error("Carrito no disponible", "Ups!");
+                                    },
+                                    0: function (data) {
+                                        toastr.error("Servicio no disponible", "Ups!");
                                     }
-                                },
-                                error: function () {
-                                    toastr.error("Servidor ocupado, intente nuevamente", "Error");
                                 }
                             });
                         }
@@ -765,39 +751,7 @@ $(document).ready(function () {
         return false;
     });
 
-    function renderCartTable() {
-        if (tablac == null) {
-            tablac = $("#tablac").DataTable({
-                responsive: true,
-                bFilter: false,
-                columns: [
-                    { title: "Codigo", width: "40%" },
-                    { title: "Marca", width: "25%" },
-                    { title: "Cantidad", width: "25%" },
-                    { title: "Quitar", width: "10%" },
-                ],
-                columnDefs: [
-                    {
-                        responsivePriority: 2,
-                        targets: [2], //Cantidad
-                        orderable: false,
-                        render: function (data, type, row) {
-                            return '<input class="width55 form-control" value=' + row[2] + ' type="text">';
-                        }
-                    },
-                    {
-                        responsivePriority: 0,
-                        targets: [3], //Boton quitar de pedido 
-                        orderable: false,
-                        render: function () {
-                            return '<i class="fa fa-times fa-2x rojo" id="cruzroja" aria-hidden="true"></i>';
-                        }
-                    },
-                ]
-            });
-        }
-        refreshCartTable(null);
-    }
+    
 
     function refreshCartTable(body) {
         if(body == null){
@@ -829,11 +783,43 @@ $(document).ready(function () {
         
     }
 
-    function buildCartRequest(item) {
+    function refreshCartHistoryTable(body) {
+        if(body == null){
+            var request = buildCartRequest();
+            $.ajax({
+                method: "POST",
+                dataType: "json",
+                url: "http://localhost:4567/item/carthist",
+                data: request,
+                statusCode: {
+                    200: function (data) {
+                        if (JSON.stringify(data) == '[[""]]') {
+                            tablahc.clear().rows.add([]).draw();
+                        } else {
+                            tablahc.clear().rows.add(data).draw();
+                        }
+                    },
+                    403: function (data) {
+                        toastr.error("Historial no disponible", "Ups!");
+                    },
+                    0: function (data) {
+                        toastr.error("Servicio no disponible", "Ups!");
+                    }
+                }
+            });
+        }else{
+            tablac.clear().rows.add(body).draw();
+        }
+        
+    }
+
+    function buildCartRequest(item, comments) {
         var request = {
             token: localStorage.token,
             id: localStorage.id,
-            item: item
+            name: localStorage.username,
+            item: item,
+            comments: comments
         }
         return JSON.stringify(request);
     }
@@ -878,104 +864,60 @@ $(document).ready(function () {
         
     }
 
-    /*/Agregar al carrito
-    $('#tabla').on('dblclick', 'tr', function () {
-        //console.log(tabla.row(fila).data());
-        var fila = tabla.row(this).data();
-        opccarrito = 2;
-        articulo = fila['codigo'] + '&' + fila['marca'] + '&0';
-        tablac.ajax.reload();
-        return false;
-    });
-
-    //Quitar del carrito
-    $('#tablac').on('click', '#cruzroja', function () {
-        var fila = $(this).parents('tr');
-        var fila = tablac.row(fila).data();
-        opccarrito = 3;
-        articulo = fila['codigo'];
-        tablac.ajax.reload();
-        return false;
-    });*/
-
-    /*function tablacarrito() {
-        
-        
-        tablac = $("#tablac").DataTable({
-            "bFilter": false,
-            "pageLength": 50,
-            "aaSorting": [],
-            "bLengthChange": false,
-            "language": {
-                "emptyTable": "Carrito vacío"
-            },
-            "responsive": true,
-            "ajax": {
-                "method": "POST",
-                "async": true,
-                "url": "./Modelo/DAOPedidos.php",
-                "data": function (d) {
-                    d.opcpedido = opccarrito;
-                    d.articulo = articulo;
-                }
-            },
-            "columns": [
-                { "data": "codigo", "width": "40%" },//0 Codigo
-                { "data": "marca", "width": "25%" },//1 Marca
-                { "data": "cantidad", "width": "25%" },//2 Cantidad
-                { "data": "cantidad", "width": "10%" }//3 Quitar               
-            ],
-            "columnDefs": [
-                {
-                    "responsivePriority": 2,
-                    "targets": [2], //Cantidad
-                    "orderable": false,
-                    "render": function (data, type, row) {
-                        return '<input class="width55 form-control" value=' + row.cantidad + ' type="text">';
-                    }
-                },
-                {
-                    "responsivePriority": 0,
-                    "targets": [3], //Boton quitar de pedido 
-                    "orderable": false,
-                    "render": function () {
-                        return '<i class="fa fa-times fa-2x rojo" id="cruzroja" aria-hidden="true"></i>';
-                    }
-                },
-            ]
-        });
-    }*/
-
-    function tablahistcompras() {
-        if (tablahc != null) {
-            tablahc.ajax.reload();
-            return false;
+    function renderCartTable() {
+        if (tablac == null) {
+            tablac = $("#tablac").DataTable({
+                responsive: true,
+                bFilter: false,
+                columns: [
+                    { title: "Codigo", width: "40%" },
+                    { title: "Marca", width: "25%" },
+                    { title: "Cantidad", width: "25%" },
+                    { title: "Quitar", width: "10%" },
+                ],
+                columnDefs: [
+                    {
+                        responsivePriority: 2,
+                        targets: [2], //Cantidad
+                        orderable: false,
+                        render: function (data, type, row) {
+                            return '<input class="width55 form-control" value=' + row[2] + ' type="text">';
+                        }
+                    },
+                    {
+                        responsivePriority: 0,
+                        targets: [3], //Boton quitar de pedido 
+                        orderable: false,
+                        render: function () {
+                            return '<i class="fa fa-times fa-2x rojo" id="cruzroja" aria-hidden="true"></i>';
+                        }
+                    },
+                ]
+            });
         }
-        tablahc = $("#tablahc").DataTable({
-            "bFilter": false,
-            "pageLength": 10,
-            "aaSorting": [],
-            "bLengthChange": false,
-            "language": {
-                "emptyTable": "Historial vacío"
-            },
-            "responsive": true,
-            "ajax": {
-                "method": "POST",
-                "async": true,
-                "url": "./Modelo/DAOPedidos.php",
-                "data": function (d) {
-                    d.opcpedido = 6;
-                }
-            },
-            "columns": [
-                { "data": "fecha", "width": "30%" },
-                { "data": "items", "width": "70%" },
-            ],
-            "order": [[0, 'desc']]
-        });
+        refreshCartTable(null);
     }
-
+    
+    function renderCartHistoryTable() {
+        if (tablahc == null) {
+            tablahc = $("#tablahc").DataTable({
+                bFilter: false,
+                pageLength: 10,
+                aaSorting: [],
+                bLengthChange: false,
+                language: {
+                    emptyTable: "Historial vacío"
+                },
+                responsive: true,
+                columns: [
+                    { title: "Fecha", width: "50%" },
+                    { title: "Items", width: "50%" }
+                ],
+                order: [[0, 'desc']]
+            });
+        }
+       refreshCartHistoryTable(null); 
+    }
 
     //BACK TO TOP EN LA PAGINA CUANDO SE PASA A LA SIGUIENTE HOJA
     $('#tabla').on('page.dt', function () {
