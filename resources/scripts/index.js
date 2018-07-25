@@ -152,6 +152,7 @@ $(document).ready(function () {
         unpressed();
         $(this).addClass("active btn-info");
         onlyOffers = true;
+        onlyNovelty = false;
         searchItems(busqueda);
         return false;
     });
@@ -433,32 +434,6 @@ $(document).ready(function () {
         }
     }
 
-    function iniciarsesion(data) {
-        if (data.includes('["')) {
-            data = JSON.parse(data);
-            $("#datosingreso").slideUp();
-            $("#datossesion p").text(data[0]);
-            botoncarrito(true); //Muestro la opcion de carrito
-            $("#datossesion").removeClass("oculto");
-            $("#bofertas").removeClass("oculto");
-            $("#bdescargarlista").removeClass("oculto");
-            toastr.success("Bienvenido " + data[0]);
-            if (coef != data[1]) {
-                coef = data[1];
-                tabla.ajax.reload();
-            }
-            toggleprecios();
-            tablacarrito();
-            tablahistcompras();
-            vertogglescolumnas(true);
-            resettogglescolumnas();
-        } else if (data.includes("no iniciada")) {
-            $("#datosingreso").slideDown(500);
-        } else {
-            toastr.error(data, "Error");
-        }
-    }
-
     function clearLocalStorage() {
         localStorage.clear();
     }
@@ -477,12 +452,6 @@ $(document).ready(function () {
         $("#clave").val("");
         $('#botoncarrito').hide();
         toggleCarrito(false);
-        //$('#clientes').addClass('oculto');
-        //botoncarrito(false);//Saco el boton de carrito
-        //toggleprecios();
-        //toggleCarrito(false);
-        //vertogglescolumnas(false);
-        //resettogglescolumnas();
     }
 
     function descargarxlsx() {
@@ -593,9 +562,7 @@ $(document).ready(function () {
     }
 
     function cookieSessionExist() {
-        //return getCookie("username") != ""; 
         return localStorage.token != null;
-        //TODO ver TOKEN AUTH
     }
 
     function setjumbo(dis, subdis) {

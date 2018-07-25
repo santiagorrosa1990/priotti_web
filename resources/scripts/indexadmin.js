@@ -3,20 +3,22 @@ $(document).ready(function () {
     var coef = 1;
     var tabla = null;
     var tablac = null;
+    var tablahc = null;
     var busqueda = "";
     var busquedaux = "";
+    var cantidad = 0;
     var timeout = null;
-    var tipolista = 2;
     var confotos = false;
-    var op = false;
-    
+    var onlyOffers = false;
+    var onlyNovelties = false;
+
 
     //INICIO   
 
-    clickednav($("#productos"));   
-    
+    clickednav($("#productos"));
+
     //Compruebo sesión existente en recarga de pagina
-    checkreload();
+    checkOnReload();
 
     //NAV BAR
 
@@ -46,37 +48,129 @@ $(document).ready(function () {
         clearTimeout(timeout);
         timeout = setTimeout(function () {
             busqueda = $("#buscador").val();
-            busqueda = busqueda.trim();            
+            busqueda = busqueda.trim();
             if (busqueda != busquedaux) {
                 busquedaux = busqueda;
-                tabla.ajax.reload();
+                searchItems(busqueda);
             }
         }, 500);
     });
 
+    function checkOnReload() {
+        if (cookieSessionExist()) {
+            setItemTable();
+            var username = localStorage.username
+            toastr.success("Bienvenido " + username);
+            toastr.warning("Contenido editable", "Atención");
+            $("#datossesion p").text(username);
+            $("#datossesion").removeClass("oculto");
+            $("#bofertas").removeClass("oculto");
+            $("#productos").removeClass("oculto"); //Mostrar productos
+            $("#clientes").removeClass("oculto");  //Mostrar clientes
+            showtablap(true);
+            setjumbo("Productos", "Administrador");
+            viewColumnToggles(true);
+            $('#botoncarrito').show();
+            //actfechas();
+            togglebotones(true);
+        } else {
+            $("#datosingreso").slideDown(500);
+        }
+    }
+
+    /*function iniciarsesion(data) {
+        if (data.includes('Usuario')) {            
+            $("#datosingreso").slideUp();
+            $("#datossesion p").text(data);
+            $("#datossesion").removeClass("oculto");
+            setjumbo("Productos", "Administrador");         
+            toastr.success("Bienvenido!");
+            toastr.warning("Ojo! =O", "Contenido editable");
+            tablaproductos();            
+            tablaclientes(); 
+            showtablap(true);             
+            actfechas();            
+            togglebotones(true);
+        } else if (data.includes("no iniciada")) {
+            $("#datosingreso").slideDown(500);
+        } else {
+            toastr.error(data, "Error");
+        }
+    }*/
+
     //Boton Iniciar Sesion
     $("#entrar").on("click", function (e) {
-        var datos = $("#datosingreso").serialize() + '&opc=2';
-        $("#usuario").val("");
-        $("#clave").val("");
-        $.ajax({
-            method: "POST",
-            url: "../Controlador/ControlSesion.php",
-            data: datos,
-            success: function (data) {
-                iniciarsesion(data);
-            },
-            error: function () {
-                toastr.error("Error de servidor", "Error");
-            }
-        });
+        login(buildLoginRequest());
         return false;
     });
 
+    function buildLoginRequest() {
+        var credentials = {
+            credentials: {
+                username: $("#usuario").val(),
+                password: $("#clave").val()
+            }
+        }
+        $("#usuario").val("");
+        $("#clave").val("");
+        return JSON.stringify(credentials);
+    }
+
+    function cookieSessionExist() {
+        return localStorage.token != null;
+    }
+
+    function login(data) {
+        $.ajax({
+            async: false,
+            method: "POST",
+            url: "http://localhost:4567/adminlogin",
+            data: data,
+            statusCode: {
+                200: function (data) {
+                    var username = parseJwt(data).username;
+                    toastr.success("Bienvenido, " + username);
+                    $("#datosingreso").slideUp();
+                    $("#datossesion p").text(username);
+                    $("#datossesion").removeClass("oculto");
+                    $("#bofertas").removeClass("oculto");
+                    $('#botoncarrito').show();
+                    $("#productos").removeClass("oculto"); //Mostrar productos
+                    $("#clientes").removeClass("oculto");  //Mostrar clientes
+                    setjumbo("Productos", "Administrador");
+                    viewColumnToggles(true);
+                    setLocalStorage(data);
+                    setItemTable();
+                    showtablap(true);
+                    //$("#bdescargarlista").removeClass("oculto");
+                },
+                403: function () {
+                    toastr.error("Datos incorrectos", "Ups!");
+                },
+                0: function () {
+                    toastr.error("Servicio no disponible", "Ups!");
+                }
+            }
+        });
+    }
+
+    function parseJwt(token) { //@Smell
+        var base64Url = token.split('.')[1];
+        var base64 = base64Url.replace('-', '+').replace('_', '/');
+        return JSON.parse(window.atob(base64));
+    };
+
+    function setLocalStorage(data) {
+        var parsed = parseJwt(data)
+        localStorage.token = data;
+        localStorage.username = parsed.username;
+        localStorage.id = parsed.id;
+    }
+
     //Cerrar Sesion
     $("#salir").on("click", function (e) {
-        cerrarsesion();
-    });    
+        logout();
+    });
 
     //SELECTORES CLIENTES
 
@@ -209,38 +303,36 @@ $(document).ready(function () {
             }
         });
         return false;
-    });    
+    });
 
     //SELECTORES PRODUCTOS 
-    
-    //Ver solo ofertas
+
     $("#bofertas").on("click", function () {
         unpressed();
         $(this).addClass("active btn-info");
-        if (tipolista != 3) {
-            tipolista = 3;
-            tabla.ajax.reload();
-        }
+        onlyOffers = true;
+        onlyNovelties = false;
+        searchItems(busqueda);
         return false;
     });
+
     //Ver todos los precios
     $("#btodos").on("click", function () {
         unpressed();
         $(this).addClass("active btn-info");
-        if (tipolista != 2) {
-            tipolista = 2;
-            tabla.ajax.reload();
-        }
+        onlyNovelties = false;
+        onlyOffers = false;
+        searchItems(busqueda);
         return false;
     });
+
     //Ver solo novedades
     $("#bnovedades").on("click", function () {
         unpressed();
         $(this).addClass("active btn-info");
-        if (tipolista != 4) {
-            tipolista = 4;
-            tabla.ajax.reload();
-        }
+        onlyNovelties = true;
+        onlyOffers = false;
+        searchItems(busqueda);
         return false;
     });
 
@@ -251,12 +343,8 @@ $(document).ready(function () {
         // Get the column API object
         var column = tabla.column($(this).attr('data-column'));
 
-        // Toggle the visibility
-        if ($(this).attr('data-column') == 8) {
-            togglefotos();
-        }
         column.visible(!column.visible());
-    });     
+    });
 
     //Checkbox para editar lista de productos (equiv y ofertas)
     $('#checkeditprod').on("click", function () {
@@ -266,7 +354,7 @@ $(document).ready(function () {
     });
 
     //Ventana emergente con editor de ofertas y equiv
-    $('#tabla').on('click', 'tr', function () {        
+    $('#tabla').on('click', 'tr', function () {
         console.log(tabla.row(this).data());
         if ($('#checkeditprod').is(':checked')) {
             var fila = tabla.row(this).data();
@@ -313,7 +401,7 @@ $(document).ready(function () {
         }
         return false;
     });
-    
+
     //boton para mostrar modulo actualizador
     $("#bimportador").on("click", function () {
         if (!$("#importador").is(":visible")) {
@@ -322,7 +410,7 @@ $(document).ready(function () {
             $("#importador").slideUp();
         }
         return false;
-    });   
+    });
 
     //actualizar todo con aprecios, arubros, alineas.txt
     $("#importarlista").on("click", function () {
@@ -330,15 +418,15 @@ $(document).ready(function () {
             title: 'Confirme:',
             content: '¿Actualizar lista de precios?',
             buttons: {
-                confirmar: function () {                                       
+                confirmar: function () {
                     $.ajax({
                         method: "POST",
                         url: "../Modelo/DAOActualizar.php",
                         data: "opc=1",
-                        beforeSend: function() {
-                            $('#msjprocesando').removeClass('oculto'); 
+                        beforeSend: function () {
+                            $('#msjprocesando').removeClass('oculto');
                         },
-                        complete: function() {
+                        complete: function () {
                             $('#msjprocesando').addClass('oculto');
                         },
                         success: function (data) {
@@ -352,7 +440,7 @@ $(document).ready(function () {
                         error: function () {
                             toastr.error("Problemas de conexion", "Error");
                         }
-                    });                    
+                    });
                 },
                 cancelar: function () {
                     //$.alert('Canceled!');
@@ -390,7 +478,7 @@ $(document).ready(function () {
             }
         });
         return false;
-    }); 
+    });
 
 
     $('#upload').on('click', function () {
@@ -405,116 +493,115 @@ $(document).ready(function () {
 
     //FUNCION DATATABLES
 
-    function tablaproductos() {
-        if(tablac == null){
+    function setItemTable() {
+        if (localStorage.token != null) {
+            renderFullItemTable();
+        }
+    }
+
+    function renderFullItemTable() {
+        if (tabla == null) {
             tabla = $("#tabla").DataTable({
-                "bFilter": false,
-                "aaSorting": [],
-                "language": {                
-                    "emptyTable": "No hay coincidencias",
-                    "info": "Mostrando _START_ a _END_ de _TOTAL_ resultados",
-                    "infoEmpty": "No hay resultados",
-                    //"infoFiltered": "(filtered from _MAX_ total entries)",
-                    //"infoPostFix": "",
-                    //"thousands": ",",
-                    "lengthMenu": "Mostrar _MENU_ por hoja",
-                    "loadingRecords": "Cargando...",
-                    "processing": "Procesando...",
-                    //"search": "Search:",
-                    //"zeroRecords": "No matching records found",
-                    "paginate": {
-                        "first": "First",
-                        "last": "Last",
-                        "next": "Siguiente",
-                        "previous": "Anterior"
-                    },
-                },
-                "responsive": true,
-                "ajax": {
-                    "method": "POST",
-                    "async": false,
-                    "url": "../Modelo/DAOProductos.php",
-                    "data": function (d) {
-                        d.opc = tipolista;
-                        d.busqueda = busqueda;
-                    }
-                },
-                "columns": [
-                    { "data": "codigo" },
-                    { "data": "aplicacion" },
-                    { "data": "marca" },
-                    { "data": "rubro" },
-                    { "data": "info" },
-                    { "data": "precio_lista" },
-                    { "data": "precio_oferta" },
-                    { "data": "precio_oferta" }, //Neto
-                    { "data": "imagen" }
+                responsive: true,
+                bFilter: false,
+                columns: [
+                    { title: "Codigo" },
+                    { title: "Aplicación" },
+                    { title: "Marca." },
+                    { title: "Rubro" },
+                    { title: "Equivalencia" },
+                    { title: "Precio" },
+                    { title: "Oferta" },
+                    { title: "Neto" },
                 ],
-                "columnDefs": [
-                    {
-                        "targets": [4],
-                        "visible": false,
-                        "searchable": true
-                    },
-                    {
-                        "targets": [5], //Precio de lista
-                        "render": function (data, type, row) {
-                            if (row.precio_oferta == 0) {
-                                return '$' + Number(data * coef).toFixed(2);
-    
-                            } else {
-                                return '<div class="tachado"> $ ' + Number(data * coef).toFixed(2) + '</div>';
+                columnDefs:
+                    [
+                        {
+                            targets: [5], //Precio
+                            responsivePriority: 1,
+                            render: function (data, type, row) {
+                                if (Number(row[6]) == 0) {
+                                    return '$' + Number(data).toFixed(2);
+                                } else {
+                                    return '<div class="tachado"> $ ' + Number(data).toFixed(2) + '</div>';
+                                }
                             }
                         },
-                        "visible": true,
-                        "searchable": false
-                    },
-                    {
-                        "targets": [6], //Precio de oferta
-                        "render": function (data, type, row) {
-                            if (row.precio_oferta == 0) {
-                                return "---";
-                            } else {
-                                return '$' + Number(data).toFixed(2);
-                            }
-    
+                        {
+                            targets: [4], //Equivalencia
+                            visible: false
                         },
-                        "visible": true,
-                        "searchable": false
-                    },
-                    {
-                        "targets": [7], //Precio neto
-                        "render": function (data, type, row) {
-                            if (row.precio_oferta == 0) {
-                                return "---";
-                            } else {
-                                return '$' + Number(data * 0.5643).toFixed(2);
-                            }
-    
+                        {
+                            targets: [6], //Oferta
+                            responsivePriority: 0,
+                            render: function (data, type, row) {
+                                if (row[6] == 0) {
+                                    return "---";
+                                } else {
+                                    return '$' + Number(data).toFixed(2);
+                                }
+
+                            },
                         },
-                        "visible": true,
-                        "searchable": false
-                    },
-                    {
-                        "targets": [8],
-                        "render": function (data, type, row) {
-                            if (confotos == 0) return row.imagen;
-                            var error = "javascript:this.src='../Resources/fotos/default.jpg'";
-                            return '<img src="../Resources/fotos/' + row.imagen + '.jpg" onerror="' + error + '" id="myImg">';                            
-                        },
-                        "visible": false,
-                        "searchable": false
-                    }
-                ]
+                        {
+                            targets: [7], //Neto
+                            responsivePriority: 1,
+                            render: function (data, type, row) {
+                                if (row[6] == 0) {
+                                    return "---";
+                                } else {
+                                    return '$' + Number(row[6] * 0.5643).toFixed(2);
+                                }
+
+                            },
+                        }
+                    ],
             });
-        }        
+        }
+        searchItems(busqueda);
+    }
+
+    function searchItems(keywords) {
+        var request = buildItemRequest(keywords);
+        console.log(request);
+        var uri;
+        if (localStorage.token != null) {
+            uri = "http://localhost:4567/item/full";
+        }
+        $.ajax({
+            method: "POST",
+            dataType: "json",
+            url: uri,
+            data: request,
+            statusCode: {
+                200: function (data) {
+                    tabla.clear().rows.add(data).draw();
+                },
+                403: function (data) {
+                    toastr.error("No autorizado", "Ups!");
+                },
+                0: function (data) {
+                    toastr.error("Servicio no disponible", "Ups!");
+                }
+            }
+        });
+    }
+
+    function buildItemRequest(keywords) {
+        var request = {
+            token: localStorage.token,
+            keywords: keywords,
+            offer: onlyOffers,
+            novelty: onlyNovelties
+        }
+        return JSON.stringify(request);
     }
 
     function tablaclientes() {
-        if(tablac == null){
+        if (tablac == null) {
             tablac = $("#tablac").DataTable({
                 "responsive": true,
-                "language": {                
+                "language": {
                     "emptyTable": "No hay coincidencias",
                     "info": "Mostrando _START_ a _END_ de _TOTAL_ resultados",
                     "infoEmpty": "No hay resultados",
@@ -577,7 +664,7 @@ $(document).ready(function () {
                 ],
                 "order": [[1, 'asc']]
             });
-        }        
+        }
     }
 
     //FUNCIONES
@@ -604,29 +691,39 @@ $(document).ready(function () {
         $("#bnovedades").removeClass("active btn-info");
     }
 
-    function iniciarsesion(data) {
-        if (data.includes('Usuario')) {            
-            $("#datosingreso").slideUp();
-            $("#datossesion p").text(data);
-            $("#datossesion").removeClass("oculto");
-            $("#productos").removeClass("oculto");
-            $("#clientes").removeClass("oculto");   
-            setjumbo("Productos", "Administrador");         
-            toastr.success("Bienvenido!");
-            toastr.warning("Ojo! =O", "Contenido editable");
-            tablaproductos();            
-            tablaclientes(); 
-            showtablap(true);             
-            actfechas();            
-            togglebotones(true);
-        } else if (data.includes("no iniciada")) {
-            $("#datosingreso").slideDown(500);
-        } else {
-            toastr.error(data, "Error");
-        }
+    function logout() {
+        clearLocalStorage();
+        viewColumnToggles(false);
+        unpressed();
+        $("#datossesion").addClass("oculto");
+        $("#bofertas").addClass("oculto");
+        //$("#bdescargarlista").addClass("oculto");
+        $("#datossesion p").text("");
+        $("#datosingreso").slideDown(500);
+        $("#usuario").val("");
+        $("#clave").val("");
+        $('#checkeditprod').prop("checked", false);
+        $("#productos").addClass("oculto");
+        $("#clientes").addClass("oculto");
+        $("#importador").hide();
+        showtablac(false);
+        showtablap(false);
+        setjumbo('Módulo Administrador', '');
+        togglebotones(false);
+        toastr.info("Se cerró sesión");
+        //$('#clientes').addClass('oculto');
+        //botoncarrito(false);//Saco el boton de carrito
+        //toggleprecios();
+        //toggleCarrito(false);
+        //vertogglescolumnas(false);
+        //resettogglescolumnas();
     }
 
-    function cerrarsesion() {        
+    function clearLocalStorage() {
+        localStorage.clear();
+    }
+
+    function cerrarsesion() {
         $.ajax({
             method: "POST",
             url: "../Controlador/ControlSesion.php",
@@ -635,17 +732,17 @@ $(document).ready(function () {
                 if (data.includes('cerrada')) {
                     $("#datossesion").addClass("oculto");
                     showtablac(false);
-                    showtablap(false);   
-                    setjumbo('Módulo Administrador', '');  
+                    showtablap(false);
+                    setjumbo('Módulo Administrador', '');
                     togglebotones(false);
-                    $("#importador").hide(); 
-                    $('#checkeditprod').prop("checked", false);            
+                    $("#importador").hide();
+                    $('#checkeditprod').prop("checked", false);
                     $("#datossesion p").text("");
                     $("#datosingreso").slideDown(500);
                     $("#usuario").val("");
                     $("#clave").val("");
                     $("#productos").addClass("oculto");
-                    $("#clientes").addClass("oculto");                                         
+                    $("#clientes").addClass("oculto");
                     toastr.info("Se cerró sesión");
                 }
             }
@@ -730,7 +827,7 @@ $(document).ready(function () {
         }
     }
 
-    function resettogglescolumnas(){
+    function resettogglescolumnas() {
         $('#fotos').prop('checked', false);
         $('#aplicacion').prop('checked', true);
         $('#marca').prop('checked', true);
@@ -738,8 +835,17 @@ $(document).ready(function () {
         $('#equivalencias').prop('checked', false);
     }
 
+    function viewColumnToggles(op) {
+        if (op == true) {
+            resettogglescolumnas();
+            $('#togglera').show();
+        } else {
+            $('#togglera').hide();
+        }
+    }
+
     function togglefotos() {
-        if (tablaexiste()) {            
+        if (tablaexiste()) {
             confotos = !confotos;
             tabla.ajax.reload();
         }
@@ -780,12 +886,12 @@ $(document).ready(function () {
             url: "../Controlador/ControlSesion.php",
             data: "opc=5",
             success: function (data) {
-                if(data.includes("otra sesión")){
+                if (data.includes("otra sesión")) {
                     toastr.error(data);
-                }else{
+                } else {
                     resettogglescolumnas();
                     iniciarsesion(data);
-                }                
+                }
             },
             error: function () {
                 alert("error de servidor");
@@ -833,25 +939,25 @@ $(document).ready(function () {
         "showDuration": "300",
         "hideDuration": "1000",
         "timeOut": "5000",
-        "extendedTimeOut": "1000",
+        "extendedTimeOut": "100",
         "showEasing": "swing",
         "hideEasing": "linear",
         "showMethod": "fadeIn",
         "hideMethod": "fadeOut"
     }
 
-     //BACK TO TOP EN LA PAGINA CUANDO SE PASA A LA SIGUIENTE HOJA
-     $('#tablac').on( 'page.dt', function () {
+    //BACK TO TOP EN LA PAGINA CUANDO SE PASA A LA SIGUIENTE HOJA
+    $('#tablac').on('page.dt', function () {
         $('html, body').animate({
             scrollTop: 300
         }, 300);
-    } );
+    });
 
-    $('#tabla').on( 'page.dt', function () {
+    $('#tabla').on('page.dt', function () {
         $('html, body').animate({
             scrollTop: 300
         }, 300);
-    } );
+    });
 
 
 
