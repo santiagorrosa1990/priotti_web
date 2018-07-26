@@ -59,6 +59,7 @@ $(document).ready(function () {
     function checkOnReload() {
         if (cookieSessionExist()) {
             setItemTable();
+            setClientTable();
             var username = localStorage.username
             toastr.success("Bienvenido " + username);
             toastr.warning("Contenido editable", "Atención");
@@ -141,6 +142,7 @@ $(document).ready(function () {
                     viewColumnToggles(true);
                     setLocalStorage(data);
                     setItemTable();
+                    setClientTable();
                     showtablap(true);
                     //$("#bdescargarlista").removeClass("oculto");
                 },
@@ -497,6 +499,88 @@ $(document).ready(function () {
         if (localStorage.token != null) {
             renderFullItemTable();
         }
+    }
+
+    function setClientTable() {
+        if (localStorage.token != null) {
+            renderClientTable();
+        }
+    }
+
+    function renderClientTable() {
+        if (tablac == null) {
+            tablac = $("#tablac").DataTable({
+                responsive: true,
+                columns: [
+                    { title: "Id" },
+                    { title: "Nombre" },
+                    { title: "Numero" },
+                    { title: "Cuit" },
+                    { title: "Email" },
+                    { title: "Coeficiente" },
+                    { title: "Último login" },
+                    { title: "Visitas" },
+                    { title: "Estado" }
+                ],
+                columnDefs: [
+                    {
+                        targets: [0],
+                        visible: false,
+                        searchable: false
+                    },
+                    {
+                        targets: [5],
+                        searchable: false
+                    },
+                    {
+                        targets: [6],
+                        searchable: true
+                    },
+                    {
+                        targets: [7],
+                        searchable: false
+                    },
+                    {
+                        targets: [8],
+                        searchable: false
+                    }
+                ],
+                order: [[1, 'asc']]
+            });
+        }
+        reloadClients();
+    }
+
+    function reloadClients(){
+        var request = buildUserRequest();
+        var uri;
+        if (localStorage.token != null) {
+            uri = "http://localhost:4567/user/list";
+        }
+        $.ajax({
+            method: "POST",
+            dataType: "json",
+            url: uri,
+            data: request,
+            statusCode: {
+                200: function (data) {
+                    tablac.clear().rows.add(data).draw();
+                },
+                403: function (data) {
+                    toastr.error("No autorizado", "Ups!");
+                },
+                0: function (data) {
+                    toastr.error("Servicio no disponible", "Ups!");
+                }
+            }
+        });
+    }
+
+    function buildUserRequest(keywords) {
+        var request = {
+            token: localStorage.token,
+        }
+        return JSON.stringify(request);
     }
 
     function renderFullItemTable() {
