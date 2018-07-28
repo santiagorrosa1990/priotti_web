@@ -361,14 +361,14 @@ $(document).ready(function () {
         if ($('#checkeditprod').is(':checked')) {
             var fila = tabla.row(this).data();
             $.confirm({
-                title: 'Editar: ' + fila['codigo'],
+                title: 'Editar: ' + fila[0],
                 content: '' +
-                    '<form class="formName" id="actproducto">' +
+                    '<form class="formName">' +
                     '<div class="form-group">' +
                     '<label>Precio Oferta:</label>' +
-                    '<input type="text" class="form-control" name="ofe" value="' + fila['precio_oferta'] + '" />' +
+                    '<input type="text" id="offerinput" class="form-control"  value="' + fila[6] + '" />' +
                     '<label>Equivalencias:</label>' +
-                    '<textarea name="equiv" cols="50" rows="10" class="form-control" type="text">' + fila['info'] + '</textarea>' +
+                    '<textarea id="equivinput" cols="50" rows="10" class="form-control" type="text">' + fila[4] + '</textarea>' +
                     '</div>' +
                     '</form>',
                 buttons: {
@@ -376,23 +376,30 @@ $(document).ready(function () {
                         text: 'Aplicar',
                         btnClass: 'btn-blue',
                         action: function () {
-                            var datos = $('#actproducto').serialize() + '&opc=1' + '&cod=' + fila['codigo'];
-                            $.ajax({
-                                method: "POST",
-                                url: "../Modelo/DAOProductos.php",
-                                data: datos,
-                                success: function (data) {
-                                    if (data.includes("actualizado")) {
-                                        toastr.success(data);
-                                        tabla.ajax.reload(null, false);
-                                    } else {
-                                        toastr.error(data, "Error");
+                            var offer = $("#offerinput").val();
+                            var equiv = $("#equivinput").val();
+                            if(offer == "") offer = 0;
+                            if (validNumber(offer)) {
+                                var request = buildItemToUpdate(fila[0], offer, equiv);
+                                $.ajax({
+                                    method: "POST",
+                                    dataType: "json",
+                                    url: "http://localhost:4567/item/update",
+                                    data: request,
+                                    statusCode: {
+                                        200: function (data) {
+                                            toastr.success("Item actualizado!");
+                                            searchItems(busqueda);
+                                        },
+                                        403: function (data) {
+                                            toastr.error("No autorizado", "Ups!");
+                                        },
+                                        0: function (data) {
+                                            toastr.error("Servicio no disponible", "Ups!");
+                                        }
                                     }
-                                },
-                                error: function () {
-                                    toastr.error("No se pudo conectar al servidor", "Error");
-                                }
-                            });
+                                });
+                            }
                         }
                     },
                     cancel: function () {
@@ -403,6 +410,24 @@ $(document).ready(function () {
         }
         return false;
     });
+
+    function validNumber(number){
+        if(isNaN(number)){
+            toastr.error("La oferta debe ser un número!");
+            return false;
+        }
+        return true;
+    }
+
+    function buildItemToUpdate(code, offer, equivalence) {
+        var request = {
+            token: localStorage.token,
+            codigo: code,
+            precio_oferta: offer,
+            info: equivalence
+        }
+        return JSON.stringify(request);
+    }
 
     //boton para mostrar modulo actualizador
     $("#bimportador").on("click", function () {
@@ -551,7 +576,7 @@ $(document).ready(function () {
         reloadClients();
     }
 
-    function reloadClients(){
+    function reloadClients() {
         var request = buildUserRequest();
         var uri;
         if (localStorage.token != null) {
@@ -679,76 +704,6 @@ $(document).ready(function () {
             novelty: onlyNovelties
         }
         return JSON.stringify(request);
-    }
-
-    function tablaclientes() {
-        if (tablac == null) {
-            tablac = $("#tablac").DataTable({
-                "responsive": true,
-                "language": {
-                    "emptyTable": "No hay coincidencias",
-                    "info": "Mostrando _START_ a _END_ de _TOTAL_ resultados",
-                    "infoEmpty": "No hay resultados",
-                    //"infoFiltered": "(filtered from _MAX_ total entries)",
-                    //"infoPostFix": "",
-                    //"thousands": ",",
-                    "lengthMenu": "Mostrar _MENU_ por hoja",
-                    "loadingRecords": "Cargando...",
-                    "processing": "Procesando...",
-                    //"search": "Search:",
-                    //"zeroRecords": "No matching records found",
-                    "paginate": {
-                        "first": "First",
-                        "last": "Last",
-                        "next": "Siguiente",
-                        "previous": "Anterior"
-                    },
-                },
-                "ajax": {
-                    "method": "POST",
-                    "async": true,
-                    "url": "../Modelo/DAOClientes.php",
-                    "data": function (d) {
-                        d.opc = 2;
-                    }
-                },
-                "columns": [
-                    { "data": "id" },
-                    { "data": "nombre" },
-                    { "data": "numero" },
-                    { "data": "cuit" },
-                    { "data": "email" },
-                    { "data": "porcentajeaumento" },
-                    { "data": "ultimo" },
-                    { "data": "visitas" },
-                    { "data": "estado" }
-                ],
-                "columnDefs": [
-                    {
-                        "targets": [0],
-                        "visible": false,
-                        "searchable": false
-                    },
-                    {
-                        "targets": [5],
-                        "searchable": false
-                    },
-                    {
-                        "targets": [6],
-                        "searchable": true
-                    },
-                    {
-                        "targets": [7],
-                        "searchable": false
-                    },
-                    {
-                        "targets": [8],
-                        "searchable": false
-                    }
-                ],
-                "order": [[1, 'asc']]
-            });
-        }
     }
 
     //FUNCIONES
