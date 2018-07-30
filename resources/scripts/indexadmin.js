@@ -188,24 +188,23 @@ $(document).ready(function () {
 
     //Modificacion de Clientes (sacando tbody del selector funciono el .on "click")
     $('#tablac').on('click', 'tr', function () {
-        console.log(tablac.row(this).data());
         if ($('#checkeditcli').is(':checked')) {
             var fila = tablac.row(this).data();
             $.confirm({
-                title: 'Editar: ' + fila['nombre'],
+                title: 'Editar: ' + fila[1],
                 content: '' +
                     '<form class="formName" id="actcliente">' +
                     '<div class="form-group">' +
                     '<label>Nº Cliente(usuario)</label>' +
-                    '<input type="text" class="form-control numero" name="numero" value="' + fila['numero'] + '" />' +
+                    '<input type="text" class="form-control" id="number" value="' + fila[2] + '" />' +
                     '<label>Cuit(clave)</label>' +
-                    '<input type="text" class="form-control cuit" name="cuit" value="' + fila['cuit'] + '" />' +
+                    '<input type="text" class="form-control" id="cuit" value="' + fila[3] + '" />' +
                     '<label>Nombre</label>' +
-                    '<input type="text" class="form-control nombre" name="nombre" value="' + fila['nombre'] + '" />' +
+                    '<input type="text" class="form-control" id="name" value="' + fila[1] + '" />' +
                     '<label>Coeficiente</label>' +
-                    '<input type="text" class="form-control" name="aumento" value="' + fila['porcentajeaumento'] + '" />' +
+                    '<input type="text" class="form-control" id="coeficient" value="' + fila[5] + '" />' +
                     '<label>Email</label>' +
-                    '<input type="text" class="form-control" name="email" value="' + fila['email'] + '" />' +
+                    '<input type="text" class="form-control" id="email" value="' + fila[4] + '" />' +
                     '<select name="estado"> <option value="ACTIVO">Activo</option> <option value="INACTIVO">Inactivo</option> </select>' +
                     '</div>' +
                     '</form>',
@@ -214,28 +213,34 @@ $(document).ready(function () {
                         text: 'Editar',
                         btnClass: 'btn-blue',
                         action: function () {
-                            var nombre = this.$content.find('.nombre').val();
-                            var numero = this.$content.find('.numero').val();
-                            var cuit = this.$content.find('.cuit').val();
+                            var id = fila[0];
+                            var nombre = $('#name').val();
+                            var email = $('#email').val();
+                            var numero = $('#number').val();
+                            var cuit = $('#cuit').val();
+                            var coeficient = $('#coeficient').val();
                             if (!nombre || !numero || !cuit) {
                                 $.alert('Nombre, numero y cuit no puede ser vacíos');
                                 return false;
                             }
-                            var datos = $('#actcliente').serialize() + '&opc=1' + '&id=' + fila['id'];
+                            var request = buildUserToUpdate(id, nombre, numero, cuit, email, coeficient);
+                            console.log(request);
                             $.ajax({
                                 method: "POST",
-                                url: "../Modelo/DAOClientes.php",
-                                data: datos,
-                                success: function (data) {
-                                    if (data.includes('actualizado')) {
-                                        toastr.success(data);
-                                        tablac.ajax.reload(null, false);
-                                    } else {
-                                        toastr.error(data, "Error");
+                                dataType: "json",
+                                url: "http://localhost:4567/user/update",
+                                data: request,
+                                statusCode: {
+                                    200: function (data) {
+                                        toastr.success("Usuario actualizado!");
+                                        reloadClients();
+                                    },
+                                    403: function (data) {
+                                        toastr.error("No autorizado", "Ups!");
+                                    },
+                                    0: function (data) {
+                                        toastr.error("Servicio no disponible", "Ups!");
                                     }
-                                },
-                                error: function () {
-                                    toastr.error("No se pudo conectar al servidor", "Error");
                                 }
                             });
                         }
@@ -248,6 +253,19 @@ $(document).ready(function () {
         }
         return false;
     });
+    
+    function buildUserToUpdate(id, nombre, numero, cuit, email, coeficiente) {
+        var request = {
+            token: localStorage.token,
+            id: id,
+            name: nombre,
+            number: numero,
+            cuit: cuit,
+            email: email,
+            coeficient: coeficiente
+        }
+        return JSON.stringify(request);
+    }
 
     //Boton para agregar nuevo cliente
     $('#bnuevocliente').on("click", function () {
@@ -257,15 +275,15 @@ $(document).ready(function () {
                 '<form class="formName" id="actcliente">' +
                 '<div class="form-group">' +
                 '<label>Nº Cliente(usuario)</label>' +
-                '<input type="text" class="form-control numero" name="numero"/>' +
+                '<input type="text" class="form-control" id="number"/>' +
                 '<label>Cuit(clave)</label>' +
-                '<input type="text" class="form-control cuit" name="cuit"/>' +
+                '<input type="text" class="form-control" id="cuit"/>' +
                 '<label>Nombre</label>' +
-                '<input type="text" class="form-control nombre" name="nombre"/>' +
+                '<input type="text" class="form-control" id="name"/>' +
                 '<label>Coeficiente</label>' +
-                '<input type="text" class="form-control" name="aumento"/>' +
+                '<input type="text" class="form-control" id="coeficient"/>' +
                 '<label>Email</label>' +
-                '<input type="text" class="form-control" name="email"/>' +
+                '<input type="text" class="form-control" id="email"/>' +
                 '</div>' +
                 '</form>',
             buttons: {
@@ -273,28 +291,33 @@ $(document).ready(function () {
                     text: 'Editar',
                     btnClass: 'btn-blue',
                     action: function () {
-                        var nombre = this.$content.find('.nombre').val();
-                        var numero = this.$content.find('.numero').val();
-                        var cuit = this.$content.find('.cuit').val();
+                        var nombre = $('#name').val();
+                        var email = $('#email').val();
+                        var numero = $('#number').val();
+                        var cuit = $('#cuit').val();
+                        var coeficient = $('#coeficient').val();
                         if (!nombre || !numero || !cuit) {
                             $.alert('Nombre, numero y cuit no puede ser vacíos');
                             return false;
                         }
-                        var datos = $('#actcliente').serialize() + '&opc=3';
+                        var request = buildUserToUpdate(null, nombre, numero, cuit, email, coeficient);
+                        console.log(request);
                         $.ajax({
                             method: "POST",
-                            url: "../Modelo/DAOClientes.php",
-                            data: datos,
-                            success: function (data) {
-                                if (data.includes('creado')) {
-                                    toastr.success(data);
-                                    tablac.ajax.reload();
-                                } else {
-                                    toastr.error(data, "Error");
+                            dataType: "json",
+                            url: "http://localhost:4567/user/update",
+                            data: request,
+                            statusCode: {
+                                200: function (data) {
+                                    toastr.success("Usuario creado!");
+                                    reloadClients();
+                                },
+                                403: function (data) {
+                                    toastr.error("No autorizado", "Ups!");
+                                },
+                                0: function (data) {
+                                    toastr.error("Servicio no disponible", "Ups!");
                                 }
-                            },
-                            error: function () {
-                                toastr.error("No se pudo conectar al servidor", "Error");
                             }
                         });
                     }
@@ -378,7 +401,7 @@ $(document).ready(function () {
                         action: function () {
                             var offer = $("#offerinput").val();
                             var equiv = $("#equivinput").val();
-                            if(offer == "") offer = 0;
+                            if (offer == "") offer = 0;
                             if (validNumber(offer)) {
                                 var request = buildItemToUpdate(fila[0], offer, equiv);
                                 $.ajax({
@@ -411,8 +434,8 @@ $(document).ready(function () {
         return false;
     });
 
-    function validNumber(number){
-        if(isNaN(number)){
+    function validNumber(number) {
+        if (isNaN(number)) {
             toastr.error("La oferta debe ser un número!");
             return false;
         }
@@ -513,10 +536,10 @@ $(document).ready(function () {
     });
 
     //Boton descargar lista .xlsx
-    $("#bdescargarlista").on("click", function () {
+    /*$("#bdescargarlista").on("click", function () {
         descargarxlsx();
         return false;
-    });
+    });*/
 
     //FUNCION DATATABLES
 
