@@ -104,8 +104,7 @@ $(document).ready(function () {
                     setItemTable();
                     renderCartTable();
                     renderCartHistoryTable();
-                    //$("#bdescargarlista").removeClass("oculto");
-                    
+                    $("#bdescargarlista").removeClass("oculto");
                 },
                 403: function () {
                     toastr.error("Datos incorrectos", "Ups!");
@@ -240,18 +239,6 @@ $(document).ready(function () {
         });
         return false;
     });
-
-    //POSIBLES    
-
-    //Boton descargar lista .xlsx
-    $("#bdescargarlista").on("click", function () {
-        descargarxlsx();
-        return false;
-    });
-
-    //FUNCION DATATABLES
-
-
 
     function searchItems(keywords) {
         var request = buildItemRequest(keywords);
@@ -556,6 +543,7 @@ $(document).ready(function () {
             $('#botoncarrito').show();
             renderCartTable();
             renderCartHistoryTable();
+            $("#bdescargarlista").removeClass("oculto");
         } else {
             $("#datosingreso").slideDown(500);
         }
