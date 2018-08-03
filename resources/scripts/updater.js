@@ -82,7 +82,7 @@ $(document).ready(function () {
     function processPrecios(data) {
         var lines = data.split('\n');
         var body = '[';
-        var cont = 0;
+        
         lines.forEach(function (element, index) {
             if (element != "") {
                 //element = element.replace(/["']/g, "").trim();
@@ -93,8 +93,9 @@ $(document).ready(function () {
                 var precio = element.substring(62).trim();//Precio del producto
                 precio = precio.substring(0, 8) + "." + precio.substring(8);
                 var cond = !linea.includes("0036") && !linea.includes("0006");
-                if (cond) {     //Marcas excluidas de la lista
-                    var object = '{"codigo":"' + codigo + '", "linea":"' + linea + '", "rubro":"' + rubro +
+                if (cond) { 
+                    //Marcas excluidas de la lista
+                    var object = '{"codigo":"' + codigo + '", "marca":"' + linea + '", "rubro":"' + rubro +
                         '", "aplicacion":"' + aplicacion + '", "precio_lista":"' + precio + '"}, ';
                     body += object;
                 }
@@ -108,7 +109,7 @@ $(document).ready(function () {
     function sendRequest(requestBody) {
         $.ajax({
             method: 'POST',
-            url: 'http://localhost:4567/item/all',
+            url: 'http://localhost:4567/item/updateall',
             data: requestBody,
             success: function (data) {
                 console.log(data);
@@ -121,9 +122,9 @@ $(document).ready(function () {
 
     function build(alineasx, aprecios, arubrosx) {
         aprecios.forEach(function (element) {
-            var linea = alineasx[element.linea];
-            var rubro = arubrosx[element.linea + "" + element.rubro];
-            element.linea = linea;
+            var linea = alineasx[element.marca];
+            var rubro = arubrosx[element.marca + "" + element.rubro];
+            element.marca = linea; //TODO emprolijar linea y marca
             element.rubro = rubro;
         });
         return JSON.stringify(aprecios);

@@ -85,6 +85,10 @@ body{
     color: red;
 }
 
+.verde{
+    color: rgb(39, 172, 90);
+}
+
 .rojoscuro{
     color: rgb(219, 0, 0);
 }

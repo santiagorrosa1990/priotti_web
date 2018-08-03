@@ -255,6 +255,7 @@ $(document).ready(function () {
             data: request,
             statusCode: {
                 200: function (data) {
+                    console.log(data);
                     tabla.clear().rows.add(data).draw();
                 },
                 403: function (data) {
@@ -604,8 +605,8 @@ $(document).ready(function () {
 
     function toggleCarrito(op) {
         if (op == true) {
-            $('#tablacontainer').removeClass('col-md-12').addClass('col-md-8');
-            $('#carritocompra').addClass('col-md-4').slideDown();
+            $('#tablacontainer').removeClass('col-md-12').addClass('col-md-7');
+            $('#carritocompra').addClass('col-md-5').slideDown();
         } else {
             $('#tablacontainer').removeClass('col-md-8').addClass('col-md-12');
             $('#carritocompra').addClass('oculto').slideUp();
@@ -640,6 +641,7 @@ $(document).ready(function () {
                             var comments = $('#commentarea').val();
                             var request = buildCartRequest(null, comments);
                             $.ajax({
+                                type: "text",
                                 method: "POST",
                                 url: "http://localhost:4567/item/emailorder",
                                 data: request,
@@ -650,7 +652,10 @@ $(document).ready(function () {
                                         refreshCartHistoryTable(null);
                                     },
                                     403: function (data) {
-                                        toastr.error("Carrito no disponible", "Ups!");
+                                        toastr.error("Error de envio", "Ups!");
+                                    },
+                                    400: function (data) {
+                                        toastr.error("Error de servidor", "Ups!");
                                     },
                                     0: function (data) {
                                         toastr.error("Servicio no disponible", "Ups!");
@@ -680,7 +685,7 @@ $(document).ready(function () {
             fila = tablac.row(fila).data();
             if (isNaN(cantidad)) cantidad = 0;
             item = fila[0] + '&' + fila[1] + '&' + cantidad;
-            updateCart(item);
+            addOrRemoveFromCart(item);
         }, 500);
     });
 
@@ -783,7 +788,7 @@ $(document).ready(function () {
     $('#tabla').on('dblclick', 'tr', function () {
         var fila = tabla.row(this).data();
         item = fila[0] + '&' + fila[2] + '&0';
-        updateCart(item);
+        addOrRemoveFromCart(item);
         return false;
     });
 
@@ -793,11 +798,11 @@ $(document).ready(function () {
         var fila = tablac.row(fila).data();
         opccarrito = 3;
         item = fila[0];
-        updateCart(item); 
+        addOrRemoveFromCart(item); 
         return false;
     });
 
-    function updateCart(item){
+    function addOrRemoveFromCart(item){
         var request = buildCartRequest(item);
         $.ajax({
             method: "POST",
@@ -825,10 +830,11 @@ $(document).ready(function () {
                 responsive: true,
                 bFilter: false,
                 columns: [
-                    { title: "Codigo", width: "40%" },
-                    { title: "Marca", width: "25%" },
-                    { title: "Cantidad", width: "25%" },
-                    { title: "Quitar", width: "10%" },
+                    { title: "Codigo", width: "30%" },
+                    { title: "Marca", width: "20%" },
+                    { title: "Cantidad", width: "20%" },
+                    { title: "Stock", width: "25%" },
+                    { title: "Quitar", width: "5%" }
                 ],
                 columnDefs: [
                     {
@@ -841,10 +847,18 @@ $(document).ready(function () {
                     },
                     {
                         responsivePriority: 0,
-                        targets: [3], //Boton quitar de pedido 
+                        targets: [4], //Boton quitar de pedido 
                         orderable: false,
                         render: function () {
                             return '<i class="fa fa-times fa-2x rojo" id="cruzroja" aria-hidden="true"></i>';
+                        }
+                    },
+                    {
+                        responsivePriority: 0,
+                        targets: [3], //Stock existente 
+                        orderable: false,
+                        render: function () {
+                            return '<i class="fa fa-check fa-2x verde" id="green_check" aria-hidden="true"></i>';
                         }
                     },
                 ]
