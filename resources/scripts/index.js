@@ -723,6 +723,7 @@ $(document).ready(function () {
                 data: request,
                 statusCode: {
                     200: function (data) {
+                        console.log(data);
                         if (JSON.stringify(data) == '[[""]]') {
                             tablac.clear().rows.add([]).draw();
                         } else {
@@ -811,6 +812,7 @@ $(document).ready(function () {
             data: request,
             statusCode: {
                 200: function (data) {
+                    console.log(data);
                     refreshCartTable(data);
                 },
                 403: function (data) {
@@ -857,8 +859,15 @@ $(document).ready(function () {
                         responsivePriority: 0,
                         targets: [3], //Stock existente 
                         orderable: false,
-                        render: function () {
-                            return '<i class="fa fa-check fa-2x verde" id="green_check" aria-hidden="true"></i>';
+                        render: function (data, type, row) {
+                            if(Number(row[2]) <= Number(row[3])){
+                                console.log("hay stock");
+                                return '<i class="fa fa-check fa-2x verde" id="green_check" aria-hidden="true"></i>';
+                            }else{
+                                console.log("no hay stock");
+                                return '<i class="fa fa-exclamation-circle fa-2x naranja" id="orange_warn" aria-hidden="true"></i>';
+                            }
+                            
                         }
                     },
                 ]
