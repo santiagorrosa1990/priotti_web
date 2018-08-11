@@ -59,6 +59,7 @@ $(document).ready(function () {
             busqueda = busqueda.trim();
             if (busqueda != busquedaux) {
                 busquedaux = busqueda;
+                console.log("searching");
                 searchItems(busqueda);
             }
         }, 500);
@@ -677,7 +678,7 @@ $(document).ready(function () {
     });
 
     //Actualizar cantidad por item
-    $("#tablac").on("change paste keyup", "input", function () {
+    $("#tablac").on("paste keyup", "input", function () {
         cantidad = $(this).val();
         var fila = $(this).parents('tr');
         clearTimeout(timeout);
@@ -685,6 +686,7 @@ $(document).ready(function () {
             fila = tablac.row(fila).data();
             if (isNaN(cantidad)) cantidad = 0;
             item = fila[0] + '&' + fila[1] + '&' + cantidad;
+            console.log("busqueda");
             addOrRemoveFromCart(item);
         }, 500);
     });
@@ -723,7 +725,7 @@ $(document).ready(function () {
                 data: request,
                 statusCode: {
                     200: function (data) {
-                        console.log(data);
+                        console.log("cart refreshed");
                         if (JSON.stringify(data) == '[[""]]') {
                             tablac.clear().rows.add([]).draw();
                         } else {
@@ -740,6 +742,8 @@ $(document).ready(function () {
             });
         }else{
             tablac.clear().rows.add(body).draw();
+            $("#orange_warn").notify("Stock insuficiente!", "warn");
+            $("#red_warn").notify("Sin stock!", "error");
         }
         
     }
@@ -804,8 +808,8 @@ $(document).ready(function () {
     });
 
     function addOrRemoveFromCart(item){
-        var request = buildCartRequest(item);
-        $.ajax({
+        var request = buildCartRequest(item);   
+        $.ajax({                                    
             method: "POST",
             dataType: "json",
             url: "http://localhost:4567/item/updcart",
@@ -860,12 +864,15 @@ $(document).ready(function () {
                         targets: [3], //Stock existente 
                         orderable: false,
                         render: function (data, type, row) {
-                            if(Number(row[2]) <= Number(row[3])){
-                                console.log("hay stock");
+                            if(Number(row[2]) <= Number(row[3])){                          
                                 return '<i class="fa fa-check fa-2x verde" id="green_check" aria-hidden="true"></i>';
                             }else{
-                                console.log("no hay stock");
-                                return '<i class="fa fa-exclamation-circle fa-2x naranja" id="orange_warn" aria-hidden="true"></i>';
+                                if(row[3] == 0){
+                                    return '<i class="fa fa-exclamation-circle fa-2x rojo" id="red_warn" aria-hidden="true"></i>';
+                                }else{
+                                    return '<i class="fa fa-exclamation-circle fa-2x naranja" id="orange_warn" aria-hidden="true"></i>';
+                                }
+                                
                             }
                             
                         }

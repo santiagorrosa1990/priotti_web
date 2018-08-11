@@ -82,11 +82,11 @@ body{
 }
 
 .rojo{
-    color: red;
+    color: rgb(206, 75, 75);
 }
 
 .verde{
-    color: rgb(39, 172, 90);
+    color: rgb(60, 141, 91);
 }
 
 .naranja{
@@ -96,12 +96,6 @@ body{
 .rojoscuro{
     color: rgb(219, 0, 0);
 }
-
-.verde{
-    color: rgb(22, 146, 0);
-}
-
-
 
 .oculto{
     display:none;
