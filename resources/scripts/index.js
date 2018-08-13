@@ -686,7 +686,7 @@ $(document).ready(function () {
             fila = tablac.row(fila).data();
             if (isNaN(cantidad)) cantidad = 0;
             item = fila[0] + '&' + fila[1] + '&' + cantidad;
-            console.log("busqueda");
+            console.log("quantity changed");
             addOrRemoveFromCart(item);
         }, 500);
     });
@@ -742,8 +742,14 @@ $(document).ready(function () {
             });
         }else{
             tablac.clear().rows.add(body).draw();
-            $("#orange_warn").notify("Stock insuficiente!", "warn");
-            $("#red_warn").notify("Sin stock!", "error");
+            $(".orange_warn").notify("Stock insuficiente!", "warn");
+            $(".red_warn").notify("Sin stock!", "error");
+            tablac.rows().eq(0).each( function ( index ) {
+                var array = tablac.row( index ).data();
+                console.log(array[3]);
+                var row = tablac.row('#row-42');
+                $(row).notify("Stock insuficiente!", "warn");
+            } );
         }
         
     }
@@ -865,12 +871,14 @@ $(document).ready(function () {
                         orderable: false,
                         render: function (data, type, row) {
                             if(Number(row[2]) <= Number(row[3])){                          
-                                return '<i class="fa fa-check fa-2x verde" id="green_check" aria-hidden="true"></i>';
+                                return '<i class="fa fa-check fa-2x verde green_check" aria-hidden="true"></i>';
                             }else{
-                                if(row[3] == 0){
-                                    return '<i class="fa fa-exclamation-circle fa-2x rojo" id="red_warn" aria-hidden="true"></i>';
+                                if(Number(row[3]) == 0){
+                                    return '<h6 class="rojo red_warn">0</h6>'
+                                    //return '<i class="fa fa-exclamation-circle fa-2x rojo red_warn" aria-hidden="true"></i>';
                                 }else{
-                                    return '<i class="fa fa-exclamation-circle fa-2x naranja" id="orange_warn" aria-hidden="true"></i>';
+                                    return '<h6 class="naranja orange_warn">'+row[3]+'</h6>'
+                                   // return '<i class="fa fa-exclamation-circle fa-2x naranja orange_warn" aria-hidden="true"></i>';
                                 }
                                 
                             }
