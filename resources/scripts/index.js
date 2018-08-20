@@ -124,10 +124,12 @@ $(document).ready(function () {
     };
 
     function setLocalStorage(data) {
-        var parsed = parseJwt(data)
         localStorage.token = data;
-        localStorage.username = parsed.username;
-        localStorage.id = parsed.id;
+    }
+
+    function getUsername(){
+        var parsed = parseJwt(localStorage.token);
+        return parsed.username;
     }
 
     function buildLoginRequest() {
@@ -260,7 +262,8 @@ $(document).ready(function () {
                     tabla.clear().rows.add(data).draw();
                 },
                 403: function (data) {
-                    toastr.error("No autorizado", "Ups!");
+                    toastr.error("Tiempo de sesión expirado", "Ups!");
+                    logout();
                 },
                 0: function (data) {
                     toastr.error("Servicio no disponible", "Ups!");
@@ -536,7 +539,7 @@ $(document).ready(function () {
 
     function checkOnReload() {
         if (cookieSessionExist()) {
-            var username = localStorage.username
+            var username = getUsername();
             toastr.success("Bienvenido " + username);
             $("#datossesion p").text(username);
             $("#datossesion").removeClass("oculto");
@@ -785,10 +788,11 @@ $(document).ready(function () {
     }
 
     function buildCartRequest(item, comments) {
+        var parsed = parseJwt(localStorage.token);
         var request = {
             token: localStorage.token,
-            id: localStorage.id,
-            name: localStorage.username,
+            id: parsed.id,
+            name: parsed.username,
             item: item,
             comments: comments
         }
