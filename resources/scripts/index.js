@@ -258,7 +258,6 @@ $(document).ready(function () {
             data: request,
             statusCode: {
                 200: function (data) {
-                    console.log(data);
                     tabla.clear().rows.add(data).draw();
                 },
                 403: function (data) {
@@ -437,7 +436,7 @@ $(document).ready(function () {
         unpressed();
         $("#datossesion").addClass("oculto");
         $("#bofertas").addClass("oculto");
-        //$("#bdescargarlista").addClass("oculto");
+        $("#bdescargarlista").addClass("oculto");
         $("#datossesion p").text("");
         $("#datosingreso").slideDown(500);
         $("#usuario").val("");
