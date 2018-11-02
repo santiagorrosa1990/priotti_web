@@ -127,7 +127,7 @@ $(document).ready(function () {
         localStorage.token = data;
     }
 
-    function getUsername(){
+    function getUsername() {
         var parsed = parseJwt(localStorage.token);
         return parsed.username;
     }
@@ -715,10 +715,10 @@ $(document).ready(function () {
         return false;
     });
 
-    
+
 
     function refreshCartTable(body) {
-        if(body == null){
+        if (body == null) {
             var request = buildCartRequest();
             $.ajax({
                 method: "POST",
@@ -742,22 +742,22 @@ $(document).ready(function () {
                     }
                 }
             });
-        }else{
+        } else {
             tablac.clear().rows.add(body).draw();
             $(".orange_warn").notify("Stock insuficiente!", "warn");
             $(".red_warn").notify("Sin stock!", "error");
-            tablac.rows().eq(0).each( function ( index ) {
-                var array = tablac.row( index ).data();
+            tablac.rows().eq(0).each(function (index) {
+                var array = tablac.row(index).data();
                 console.log(array[3]);
                 var row = tablac.row('#row-42');
                 $(row).notify("Stock insuficiente!", "warn");
-            } );
+            });
         }
-        
+
     }
 
     function refreshCartHistoryTable(body) {
-        if(body == null){
+        if (body == null) {
             var request = buildCartRequest();
             $.ajax({
                 method: "POST",
@@ -780,10 +780,10 @@ $(document).ready(function () {
                     }
                 }
             });
-        }else{
+        } else {
             tablac.clear().rows.add(body).draw();
         }
-        
+
     }
 
     function buildCartRequest(item, comments) {
@@ -812,13 +812,13 @@ $(document).ready(function () {
         var fila = tablac.row(fila).data();
         opccarrito = 3;
         item = fila[0];
-        addOrRemoveFromCart(item); 
+        addOrRemoveFromCart(item);
         return false;
     });
 
-    function addOrRemoveFromCart(item){
-        var request = buildCartRequest(item);   
-        $.ajax({                                    
+    function addOrRemoveFromCart(item) {
+        var request = buildCartRequest(item);
+        $.ajax({
             method: "POST",
             dataType: "json",
             url: "http://localhost:4567/item/updcart",
@@ -836,7 +836,7 @@ $(document).ready(function () {
                 }
             }
         });
-        
+
     }
 
     function renderCartTable() {
@@ -873,19 +873,19 @@ $(document).ready(function () {
                         targets: [3], //Stock existente 
                         orderable: false,
                         render: function (data, type, row) {
-                            if(Number(row[2]) <= Number(row[3])){                          
+                            if (Number(row[2]) <= Number(row[3])) {
                                 return '<i class="fa fa-check fa-2x verde green_check" aria-hidden="true"></i>';
-                            }else{
-                                if(Number(row[3]) == 0){
+                            } else {
+                                if (Number(row[3]) == 0) {
                                     return '<h6 class="rojo red_warn">0</h6>'
                                     //return '<i class="fa fa-exclamation-circle fa-2x rojo red_warn" aria-hidden="true"></i>';
-                                }else{
-                                    return '<h6 class="naranja orange_warn">'+row[3]+'</h6>'
-                                   // return '<i class="fa fa-exclamation-circle fa-2x naranja orange_warn" aria-hidden="true"></i>';
+                                } else {
+                                    return '<h6 class="naranja orange_warn">' + row[3] + '</h6>'
+                                    // return '<i class="fa fa-exclamation-circle fa-2x naranja orange_warn" aria-hidden="true"></i>';
                                 }
-                                
+
                             }
-                            
+
                         }
                     },
                 ]
@@ -893,7 +893,7 @@ $(document).ready(function () {
         }
         refreshCartTable(null);
     }
-    
+
     function renderCartHistoryTable() {
         if (tablahc == null) {
             tablahc = $("#tablahc").DataTable({
@@ -912,7 +912,7 @@ $(document).ready(function () {
                 order: [[0, 'desc']]
             });
         }
-       refreshCartHistoryTable(null); 
+        refreshCartHistoryTable(null);
     }
 
     //BACK TO TOP EN LA PAGINA CUANDO SE PASA A LA SIGUIENTE HOJA
